@@ -1,0 +1,41 @@
+/* Stolen from http://www.useragentman.com/blog/2012/01/03/cross-browser-html5-progress-bars-in-depth */
+
+progress {
+  /* Turns off styling - not usually needed, but good to know. */
+  appearance: none;
+  -moz-appearance: none;
+  -webkit-appearance: none;
+
+  /* gets rid of default border in Firefox and Opera. */ 
+  border: none;
+
+  /* Needs to be in here for Safari polyfill so background images work as expected. */
+  background-size: auto;
+  
+  /* Dimensions */
+  width: 90%;
+  height: 1em;
+}
+
+progress {
+	color: #999;
+  background-color: #ffeeee;
+  border:1px solid #ccc;
+  width: 90%;
+  height: 1em;
+}
+
+/* http://stackoverflow.com/questions/7190898/progress-bar-with-html-and-css */
+
+.custom-progress-bar {
+  background-color: black;
+  border-radius: 13px; /* (height of inner div) / 2 + padding */
+  padding: 3px;
+}
+
+.custom-progress-bar > .custom-progress-bar-inner {
+   background-color: orange;
+   width: 40%; /* Adjust with JavaScript */
+   height: 20px;
+   border-radius: 10px;
+}

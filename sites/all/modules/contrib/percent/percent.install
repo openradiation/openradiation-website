@@ -1,0 +1,33 @@
+<?php
+/**
+ * @file
+ * Install file for the percent module.
+ */
+
+/**
+ * Implements hook_field_schema().
+ */
+function percent_field_schema($field) {
+  return array(
+    'columns' => array(
+      'value' => array(
+        'type' => 'int',
+        'not null' => FALSE,
+        'default' => 0,
+        'sortable' => TRUE,
+      ),
+      'target' => array(
+        'type' => 'int',
+        'not null' => FALSE,
+        'default' => 0,
+        'sortable' => TRUE,
+      ),
+      'percent' => array(
+        'type' => 'float',
+        'not null' => FALSE,
+        'default' => 0.0,
+        'sortable' => TRUE,
+      ),
+    ),
+  );
+}

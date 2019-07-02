@@ -1,0 +1,5 @@
+name = Gazwal Dev7 Custom Blocks
+description = Custom blocks for this website.
+core = 7.x
+version = VERSION
+package = Gazwal

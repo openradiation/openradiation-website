@@ -1,0 +1,30 @@
+
+/**
+ * hide "up" and "down" links but leave theme "clickable"
+ */
+ul.bluestone-thumbs-up-down .rate-button {
+    display: inline-block;
+    text-indent: -9999px;
+    width: 24px;
+    height: 24px;
+}
+
+ul.bluestone-thumbs-up-down li {
+  display: inline;
+}
+
+.bluestone-rate-thumbs-up-down-btn-up {
+    background: url(thumbs.png) no-repeat 0 -24px;
+}
+.bluestone-rate-thumbs-up-down-btn-up.rate-voted {
+    background: url(thumbs.png) no-repeat 0 0;
+}
+
+.bluestone-rate-thumbs-up-down-btn-down {
+    background: url(thumbs.png) no-repeat 0 -72px;
+}
+
+.bluestone-rate-thumbs-up-down-btn-down.rate-voted {
+    background: url(thumbs.png) no-repeat 0 -48px;
+}
+

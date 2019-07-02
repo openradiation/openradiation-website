@@ -1,0 +1,23 @@
+<?php
+/**
+ * Implements hook_requirements
+ */
+function gazwaldev7_UItoTop_requirements($phase) {
+	$requirements = array();
+	if ($phase == 'runtime') {
+		if (!libraries_get_path('UItoTop')) {
+			$requirements['uitotop'] = array(
+				'title' => t('UItoTop Library'),
+				'value' => t('The UItoTop library is required, make sure the UItoTop library is in sites/all/libraries'),
+				'severity' => REQUIREMENT_ERROR,
+			);
+		} else {
+			$requirements['uitotop'] = array(
+				'title' => t('UItoTop Library'),
+				'value' => t('The UItoTop library is successfully installed'),
+				'severity' => REQUIREMENT_OK,
+			);
+		}
+	}
+	return $requirements;
+}

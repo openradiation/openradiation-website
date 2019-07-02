@@ -1,0 +1,8 @@
+; $Id$
+name = Youtube-like comments
+description = Display comments in a youtube-like way, using rate module for likes.
+core = 7.x
+package = Bluestone
+version = "7.x-1.0-beta1"
+scripts[] = socialcomments.js
+dependencies[] = rate

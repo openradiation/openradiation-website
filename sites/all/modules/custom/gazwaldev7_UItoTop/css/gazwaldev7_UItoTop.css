@@ -1,0 +1,12 @@
+/* ! changement de l'image fournie par defaut avec le plugin */
+#toTop {
+    background: transparent url(../images/ui.totop.png) no-repeat left top;
+    width: 40px;
+    height: 40px;
+}
+
+#toTopHover {
+    background: transparent url(../images/ui.totop.png) no-repeat left -40px;
+    width: 40px;
+    height: 40px;
+}

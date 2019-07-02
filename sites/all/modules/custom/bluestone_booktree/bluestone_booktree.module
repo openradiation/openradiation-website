@@ -1,0 +1,107 @@
+<?php
+/**
+ * Define the Book Outline Block/
+ * Implementation of hook_block_info()
+ */
+function bluestone_booktree_block_info() {
+  $block['book_outline'] = array (
+    'info' => 'Book Outline',
+    'cache' => DRUPAL_CACHE_PER_PAGE,
+  );  
+  return $block;
+}
+
+/**
+ * Define the contents and title of the block/
+ * Implementation of hook_block_view()
+ *
+ * Returns a renderable block array containing the current book's outline if
+ * the node is part of a book.
+ *
+ * Returns NULL if the current menu item is not part of a book heirarchy.
+ */
+function bluestone_booktree_block_view() {
+    return ;
+  if ($book = bluestone_booktree_is_book_node()) {
+    $tree = menu_tree_all_data(book_menu_name($book['bid']), $link = NULL, $max_depth = NULL);
+
+    // If we pass 1 as the second param, we just get the top level node in the
+    // book. Since the key will be the top level mlid, we'll have to use 
+    // ['p1'] in the $book array (which contains the top mlid) when we use it 
+    // for the block title.
+    $book_name = (book_toc($book['bid'], 1));
+
+    // Build the block title and contents
+    $block['subject'] = $book_name[$book['p1']];
+    $block['content'] = menu_tree_output($tree);
+    
+    //alternative
+    $data = array_shift($tree);
+    krumo($data);
+    $mlid = $data['link']['mlid'];
+    krumo($mlid);
+    $subtree = bluestone_booktree_get_subtree($tree, $mlid);
+    krumo($subtree);
+    // Render as HTML menu list
+    $tree_output = menu_tree_output($subtree);
+    
+    //$tree_output = menu_tree_output($data['below']);
+    krumo(drupal_render($tree_output));
+    $block['content'] = render($tree_output); 
+    $content = $block['content'];
+
+    // Return the block
+    return $content;
+  }
+  // If the current node isn't part of a book, just return nothing.
+  return NULL;
+}
+
+/**
+ * Checks to see if current node is part of a book.
+ * Returns book array if it is part of a book, FALSE is not.
+ */
+function bluestone_booktree_is_book_node() {
+  if ((arg(0) == 'node') && (is_numeric(arg(1)))) {
+    $node = menu_get_object();
+    if (isset($node->book)) {
+      return $node->book;
+    }
+  }
+  return FALSE;
+}
+
+
+/**
+ * Extract a specific subtree from a menu tree based on a menu link id (mlid)
+ *
+ * @param array $tree
+ *   A menu tree data structure as returned by menu_tree_all_data() or menu_tree_page_data()
+ * @param int $mlid
+ *   The menu link id of the menu entry for which to return the subtree
+ * @return array
+ *   The found subtree, or NULL if no entry matched the mlid
+ */
+function bluestone_booktree_get_subtree($tree, $mlid) {
+  // Check all top level entries
+  foreach ($tree as $key => $element) {
+    // Is this the entry we are looking for?
+    if ($mlid == $element['link']['mlid'])  {
+      // Yes, return while keeping the key
+      return array($key => $element);
+    }
+    else {
+      // No, recurse to children, if any
+      if ($element['below']) {
+        $submatch = bluestone_booktree_get_subtree($element['below'], $mlid);
+        // Found wanted entry within the children?
+        if ($submatch) {
+          // Yes, return it and stop looking any further
+          return $submatch;
+        }
+      }
+    }
+  }
+  // No match at all
+  return NULL;
+}

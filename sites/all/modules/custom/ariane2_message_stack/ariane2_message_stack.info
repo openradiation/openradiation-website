@@ -1,0 +1,7 @@
+; $Id$
+name = Ariane2 Message stack
+description = A DESINSTALLER - remplacé par le module Ariane Message Stack
+core = 7.x
+dependencies[] = message
+package = Bluestone
+version = "7.2.1"

@@ -1,0 +1,183 @@
+<?php
+
+
+
+/**
+ * Implements hook_menu().
+ */
+function bluestone_og_email_menu() {
+    $items = array();
+    $items['mission/%node/email'] = array(
+        'title' => 'Envoyer un e-mail aux membres de la mission',
+        'description' => 'Envoyer un e-mail aux membres de la mission',
+        'page callback' => 'drupal_get_form',
+        'page arguments' => array('bluestone_og_email_menu_form', 1),
+        'access callback' => 'bluestone_og_email_access',
+        //'access arguments' => array( 1),
+        
+        'access arguments' => array('access mission administration'),
+        'type' => MENU_LOCAL_TASK
+    );
+
+    return $items;
+    
+  
+  
+}
+
+function bluestone_og_email_menu_access_callback()
+{
+
+}
+
+function bluestone_og_email_theme($existing, $type, $theme, $path) {
+    return array(
+        'bluestone_og_email_table' => array(
+            'variables' => array('users' => array()),
+            'template' => 'bluestone-og-email',
+            'path' => drupal_get_path("module", "bluestone_og_email").'/templates'
+        )
+    );
+}
+
+function bluestone_og_email_preprocess_bluestone_og_email_table(&$variables)
+{
+    drupal_add_css(drupal_get_path("module", "bluestone_og_email").DIRECTORY_SEPARATOR."bluestone_og_email.css");
+}
+
+/**
+ * Form builder function to allow choice of which batch to run.
+ */
+function bluestone_og_email_menu_form($form, $form_state, $node) {
+
+    //$query = "select o.created,  u.mail, u.uid from og_membership o, node n, users u where u.uid = o.etid and n.nid = o.gid and gid = ".$node->nid." and state = '1' and field_name = 'user_groups' and entity_type = 'user'";
+    $query = "select o.created,  u.mail, u.uid from og_membership o, node n, users u where u.uid = o.etid and n.nid = o.gid and gid = ".$node->nid." and state = '1' and entity_type = 'user'";
+    $result = db_query($query);
+    $users = array();
+    foreach($result as $res) {
+        $us = user_load($res->uid);
+        $users[$res->uid] = $us->name." (".$us->mail.")";
+    }
+
+    $form['users'] = array(
+        '#title' => t('Membres actifs de la mission : '),
+        '#type' => 'checkboxes',
+        '#default_value' => array_keys($users),
+        '#options' => $users,
+    );
+
+    $form['#attached']['css'] = array(
+        drupal_get_path('module', 'bluestone_og_email') . '/bluestone_og_email.css',
+    );
+
+    $form['#attached']['js'] = array(
+        drupal_get_path('module', 'bluestone_og_email') . '/bluestone_og_email.js',
+    );
+
+    $form['users']["#suffix"] = '<div id="og_email_select_all"> <input id="og_email_select_all_input" checked="checked" name="og_email_select_all" type="checkbox"> <label for="og_email_select_all_input"> Tout Désélectionner </span> </div>';
+    $form['gid'] = array("#type" => 'value', '#value' => $node->nid);
+
+    $form['message'] = array(
+        '#title' => 'Message',
+        '#type' => 'textarea'
+    );
+
+    $form['submit'] = array(
+        '#type' => 'submit',
+        '#value' => 'Envoyer le message',
+    );
+
+    return $form;
+}
+
+function bluestone_og_email_menu_form_submit($form, &$form_state) {
+
+    $gid = $form_state["values"]["gid"];
+    $g = node_load($gid);
+    $message = $form_state["values"]["message"];
+    global $user;
+
+    if($g && isset($form_state["values"]["users"]) && is_array($form_state["values"]["users"]))
+        foreach($form_state["values"]["users"] as $uid => $val)
+        {
+            if(intval($val) < 1)
+                continue;
+
+            $u = user_load($uid);
+            bluestone_og_send_mail($g, $u, $message);
+        }
+
+
+}
+
+function bluestone_og_send_mail($g, $u, $m)
+{
+    global $user;
+    $message = '<html><body>';
+    $message .= "<p>";
+    $message .= nl2br($m); 
+    $message .= "</p>";
+    $message .= "</table>";
+    $message .= "</body></html>";
+
+    $to = $u->name . ' <'. $u->mail . '>';
+    $from = $user->name . ' <'. $user->mail . '>';
+    $subject = $g->title;
+
+
+    $params = array(
+        'body'    => array(0=>$message),
+        'subject' => $subject,
+    );
+    
+    if (drupal_mail('bluestone_og_email', 'send_email', $to, language_default(), $params, $from, TRUE)) {
+        dsm( 'Votre message a bien été envoyé à '.$u->name);
+    } else {
+        //dsm( 'Votre message à bien été envoyé.');
+        dsm( 'Votre message n\'a pas pu être envoyé à '.$u->name);
+    }
+
+}
+
+function bluestone_og_email_mail($key, &$message, $params) {
+  // note: l'utilisation d'une clé va nous permettre de distinguer plusieurs templates d'emails pouvant être envoyés par un même module.
+  switch ($key) {
+    case 'send_email':
+      // note: Ici nous récupérons les informations passées dans le tableau $params
+      $message['subject'] = $params['subject'];
+      $message['body'] = $params['body'];
+      break;
+  }
+}
+
+
+
+function bluestone_og_email_access($gid)
+{
+
+    if(user_access('administer site configuration'))
+        return true;
+
+    global $user;
+    if($user->uid == 1)
+        return true;
+
+    if(bluestone_is_webmaster() or bluestone_is_admin())
+        return true;
+
+    $og_context = og_context();
+    if(isset($og_context["gid"]))
+    {
+        $gid = $og_context["gid"];
+    }
+
+    if(og_is_member('node', $gid))
+    {
+        $roles = og_get_user_roles('node', $gid);
+        if(in_array('Project manager', $roles))
+        {
+            return true;
+        }
+    }
+    return false;
+}

@@ -1,0 +1,11 @@
+name = Simple Cookie Compliance
+description = Adds cookie compliance support.
+core = 7.x
+configure = admin/config/system/simple-cookie-compliance
+
+; Information added by Drupal.org packaging script on 2017-06-05
+version = "7.x-1.5"
+core = "7.x"
+project = "simple_cookie_compliance"
+datestamp = "1496694548"
+

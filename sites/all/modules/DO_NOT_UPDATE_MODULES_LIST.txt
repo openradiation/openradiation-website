@@ -1,0 +1,35 @@
+Modules à ne pas mettre à jour
+------------------------------
+
+La vérification de ces modules peut être désactivée dans la fonction
+bluestone_global_update_projects_alter()
+
+* Wysiwyg
+Garder la version de dev
+La version 7.x-2.2 n'est pas compatible avec les dernières versions jQuery
+
+* userpoints
+En cas de mise à jour, modifier la fonction :
+function userpoints_transaction_load($txn_id) {
+//NM
+//Bluestone
+// ajout de la condition && is_numeric($txn_id)
+  if (!empty($txn_id) && is_numeric($txn_id)) {
+    $transaction = db_query('SELECT * from {userpoints_txn} WHERE txn_id = :txn', array(':txn' => $txn_id))->fetchObject();
+  }
+  if (empty($transaction)) {
+    return FALSE;
+  }
+
+* simplenews
+En cas de mise à jour, une adaptation doit être faite pour fonctionner avec Postgresql
+Fichier simplenews.mail.inc
+  //Correction NM / Bluescale
+  //Correctif nécessaire pour Postgresql
+  db_insert('simplenews_mail_spool', array('return' => Database::RETURN_NULL))
+    ->from($select)
+    ->execute();
+au lieu de
+  db_insert('simplenews_mail_spool')
+    ->from($select)
+    ->execute();

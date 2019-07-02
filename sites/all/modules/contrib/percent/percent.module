@@ -1,0 +1,482 @@
+<?php
+/**
+ * @file
+ * Defines the percent field.
+ *
+ * The target value is set up in the field instance settings.
+ * The field itself stores the formatted value.
+ * The percentage is stored a a calcaulated value and goes to a maximum of 100%.
+ *
+ */
+
+/**
+ * Implements hook_element_info().
+ */
+function percent_element_info() {
+  return array(
+    'percent_field' => array(
+      '#input' => TRUE,
+      '#process' => array('percent_field_process'),
+      '#theme' => 'percent_field',
+      '#theme_wrappers' => array('form_element'),
+    ),
+  );
+}
+
+/**
+ * Implements hook_field_insert().
+ */
+function percent_field_insert($entity_type, $entity, $field, $instance, $langcode, &$items) {
+  foreach ($items as $delta => $value) {
+    _percent_process($items[$delta], $delta, $field, $entity);
+  }
+}
+
+/**
+ * Implements hook_field_update().
+ */
+function percent_field_update($entity_type, $entity, $field, $instance, $langcode, &$items) {
+  foreach ($items as $delta => $value) {
+    _percent_process($items[$delta], $delta, $field, $entity);
+  }
+}
+
+/**
+ * Calculates the current percent value for storage.
+ */
+function _percent_process(&$item, $delta, $field, $entity) {
+  $item['percent'] = $item['value'] < $item['target'] ? 100 * $item['value'] / $item['target'] : 100.00;
+}
+
+/**
+ * Implements hook_field_info().
+ */
+function percent_field_info() {
+  return array(
+    'percent' => array(
+      'label' => t('Percentage'),
+      'description' => t('Store a value value in the field.'),
+      'default_widget' => 'percent_field',
+      'default_formatter' => 'percent_formatted',
+    ),
+  );
+}
+
+/**
+ * Implements hook_field_instance_settings_form().
+ */
+function percent_field_instance_settings_form($field, $instance) {
+  $settings = $instance['settings'] + percent_instance_settings_defaults();
+  $form = array();
+
+  $form['exceed'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Exceed target'),
+    '#description' => t('Allow the field value to exceed the target value.'),
+    '#default_value' => $settings['exceed'],
+  );
+
+  $form['unit'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Units'),
+    '#description' => t('The name of the unit being counted. You can supply a singular and a plural, divided by a colon <em>unit:units</em>.'),
+    '#default_value' => $settings['unit'],
+  );
+
+  return $form;
+}
+
+function percent_instance_settings_defaults() {
+  return array('exceed' => 1, 'unit' => t('unit:units'));
+}
+
+/**
+ * Implements hook_field_validate().
+ */
+function percent_field_validate($obj_type, $object, $field, $instance, $langcode, &$items, &$errors) {
+  $settings = $instance['settings'];
+  foreach($items as $delta => $item) {
+    if (!empty($item['value'])) {
+      if (!is_numeric($item['value'])) {
+        $errors[$field['field_name']][$langcode][$delta][] = array(
+          'error' => 'percentage_not_numeric',
+          'message' => t('%name: Progress value is not a number.', array('%name' => $instance['label'])),
+        );
+      }
+      elseif ($item['value'] < 0) {
+        $errors[$field['field_name']][$langcode][$delta][] = array(
+          'error' => 'percentage_less_than_1',
+          'message' => t('%name: Progress value must be 0 or greater.', array('%name' => $instance['label'])),
+        );
+      }
+    }
+  }
+}
+
+/**
+ * Implement hook_field_is_empty().
+ */
+function percent_field_is_empty($item, $field) {
+  if (empty($item['value']) && (string) $item['value'] !== '0') {
+    return TRUE;
+  }
+  return FALSE;
+}
+
+
+/**
+ * Implements hook_field_widget_info().
+ */
+function percent_field_widget_info() {
+  return array(
+    'percent_field' => array(
+      'label' => t('Percentage value'),
+      'field types' => array('percent'),
+      'multiple values' => FIELD_BEHAVIOR_DEFAULT,
+    ),
+  );
+}
+
+/**
+ * Implements hook_field_widget_form().
+ */
+function percent_field_widget_form(&$form, &$form_state, $field, $instance, $langcode, $items, $delta = 0, $element) {
+  $element += array(
+    '#type' => $instance['widget']['type'],
+    '#default_value' => isset($items[$delta]) ? $items[$delta] : array('value' => 0, 'target' => 100, 'percent' => 0),
+  );
+  return $element;
+}
+
+/**
+ * Processes the percent type element before displaying the field.
+ *
+ * Build the form element. When creating a form using FAPI #process,
+ * note that $element['#value'] is already set.
+ *
+ * The $fields array is in $complete_form['#field_info'][$element['#field_name']].
+ */
+function percent_field_process($element, $form_state, $complete_form) {
+  $instance = field_widget_instance($element, $form_state);
+  $settings = $instance['settings'] + percent_instance_settings_defaults();
+  $exceeds = empty($settings['exceed']) ? t('You cannot exceed the target value.') : t('You can exceed the target value.');
+  list($unit, $units) = _percent_units($settings, TRUE);
+
+  $element['#element_validate'] = array('percent_field_widget_validate');
+
+  $element['value'] =  array(
+    '#type' => 'textfield',
+    '#title' => t('Progress'),
+    '#description' => t('The number of !units completed so far towards the target.', array('!units' => $units)) . ' ' . $exceeds,
+    '#default_value' => isset($element['#value']['value']) ? $element['#value']['value'] : 0,
+    '#required' => !empty($element['#required']),
+    '#size' => 10,
+    '#maxlength' => 6,
+  );
+
+  $element['target'] =  array(
+    '#type' => 'textfield',
+    '#title' => t('Target'),
+    '#description' => t('The number of !units that have to be reached.', array('!units' => $units)) . ' ' . $exceeds,
+    '#default_value' => isset($element['#value']['target']) ? $element['#value']['target'] : 100,
+    '#required' => !empty($element['#required']),
+    '#size' => 10,
+    '#maxlength' => 6,
+  );
+
+  return $element;
+}
+
+/**
+ * Return the singular and plural versions of the unit.
+ *
+ * @param array $settings
+ * @return array
+ */
+function _percent_units($settings, $force = FALSE) {
+  if (empty($settings['unit'])) {
+    return $force ? array(t('unit'), t('units')) : array('', '');
+  }
+  if (strpos($settings['unit'], ':') === FALSE) {
+    return array($settings['unit'], $settings['unit']);
+  }
+  return explode(':', $settings['unit']);
+}
+
+function percent_field_widget_validate($element, &$form_state) {
+  $instance = field_widget_instance($element, $form_state);
+  $settings = $instance['settings'] + percent_instance_settings_defaults();
+  $value = $element['value']['#value'];
+  $target = $element['target']['#value'];
+
+  if ($value !== '' && (!is_numeric($value) || intval($value) != $value || $value < 0)) {
+    form_error($element, t('%name must be a number, zero or greater.', array('%name' => $element['value']['#title'])));
+  }
+  elseif ($target !== '' && (!is_numeric($target) || intval($target) != $target || $target <= 0)) {
+    form_error($element, t('%name must be a number, one or greater.', array('%name' => $element['target']['#title'])));
+  }
+  elseif ($value > $target && !$settings['exceed']) {
+    form_error($element, t('%name cannot exceed the target value of !target.', array('%name' => $element['target']['#title'], '!target' => $target)));
+  }
+}
+
+/**
+ * Implementation of hook_field_formatter_info().
+ */
+function percent_field_formatter_info() {
+  return array(
+    'percent_formatted' => array(
+      'label' => t('Percentage formatted'),
+      'field types' => array('percent'),
+      'settings' => array(
+        'format' => '!value of !target !units',
+      ),
+    ),
+    'percent_bar' => array(
+      'label' => t('Percentage value bar'),
+      'field types' => array('percent'),
+      'settings' => array(
+        'include' => FALSE,
+        'format' => '!value of !target !units',
+      ),
+    ),
+    'percent_bar_custom' => array(
+      'label' => t('Percentage value bar (custom)'),
+      'field types' => array('percent'),
+      'settings' => array(
+        'include' => FALSE,
+        'format' => '!value of !target !units',
+        'background' => 'black',
+        'foreground' => 'orange',
+      ),
+    ),
+  );
+}
+
+/**
+ * Implements hook_field_formatter_view().
+ */
+function percent_field_formatter_view($object_type, $object, $field, $instance, $langcode, $items, $display) {
+  if (in_array($display['type'], array('percent_bar', 'percent_bar_custom'))) {
+    drupal_add_css(drupal_get_path('module', 'percent') . '/percent.css');
+  }
+  $elements = array();
+  foreach ($items as $delta => $item) {
+    $elements[$delta] = array(
+      '#theme' => 'percent_formatter_' . $display['type'],
+      '#element' => $item,
+      '#field' => $instance,
+      '#display' => $display,
+    );
+  }
+  return $elements;
+}
+
+/**
+ * Implements hook_theme().
+ */
+function percent_theme() {
+  return array(
+    'percent_field' => array(
+      'render element' => 'element',
+    ),
+    'percent_formatter_percent_formatted' => array(
+      'variables' => array('element' => NULL, 'field' => NULL, 'display' => NULL),
+    ),
+    'percent_formatter_percent_bar' => array(
+      'variables' => array('element' => NULL, 'field' => NULL, 'display' => NULL),
+    ),
+    'percent_formatter_percent_bar_custom' => array(
+      'variables' => array('element' => NULL, 'field' => NULL, 'display' => NULL),
+    ),
+  );
+}
+
+/**
+ * Formats a percent field widget.
+ */
+function theme_percent_field($vars) {
+  $element = $vars['element'];
+
+  $output = '';
+  $output .= '<div class="percent-field-subrow clearfix">';
+  $output .= '<div class="percent-field-title percent-field-column">' . drupal_render($element['value']) . '</div>';
+  $output .= '<div class="percent-field-url' . drupal_render($element['target']) . '</div>';
+  $output .= '</div>';
+  $output .= drupal_render_children($element);
+
+  return $output;
+}
+
+function percent_display_args($element, $settings) {
+  $value = intval($element['value']);
+  $target = intval($element['target']);
+  $percent = intval($element['percent']);
+  $progress = $value > $target ? $target : $value;
+  list($unit, $units) = _percent_units($settings);
+  return array(
+    '!value' => $value,
+    '!progress' => $progress,
+    '!percent' => $percent,
+    '!target' => $target,
+    '!exceeds' => !empty($settings['exceeds']),
+    '!unit' => $unit,
+    '!units' => $units,
+  );
+}
+
+/**
+ * Implements hook_field_formatter_settings_form().
+ */
+function percent_field_formatter_settings_form($field, $instance, $view_mode, $form, &$form_state) {
+  $display = $instance['display'][$view_mode];
+  $settings = $display['settings'];
+  $elements = array();
+
+  switch ($display['type']) {
+  	case 'percent_formatted':
+      $elements['format'] = array(
+        '#type' => 'textfield',
+        '#title' => t('Formatting string'),
+        '#description' => t('You can use substitutions !target, !value, !progress (same as !value but limited to !target), and !percent, plus !unit (singular) and !units (plural).'),
+        '#default_value' => $settings['format'],
+        '#required' => TRUE,
+        '#size' => 40,
+      );
+      break;
+
+  	case 'percent_bar_custom':
+      $elements['background'] = array(
+        '#type' => 'textfield',
+        '#title' => t('Background color'),
+        '#description' => t('Use any valid CSS color designation, e.g. "black", #070707, rgb(7, 7, 99)'),
+        '#default_value' => $settings['background'],
+        '#required' => TRUE,
+        '#size' => 20,
+      );
+      $elements['foreground'] = array(
+        '#type' => 'textfield',
+        '#title' => t('Foreground (bar) color'),
+        '#description' => t('Use any valid CSS color designation, e.g. "orange", #070707, rgb(7, 7, 99)'),
+        '#default_value' => $settings['foreground'],
+        '#required' => TRUE,
+        '#size' => 20,
+      );
+      // No break; here, we want these too:
+
+  	case 'percent_bar':
+      $elements['include'] = array(
+        '#type' => 'checkbox',
+        '#title' => t('Include text string'),
+        '#description' => t('When checked you can add a formatted text string below the progress bar.'),
+        '#default_value' => $settings['include'],
+      );
+      $elements['format'] = array(
+        '#type' => 'textfield',
+        '#title' => t('Formatting string'),
+        '#description' => t('You can use substitutions !target, !value, !progress (same as !value but limited to !target), and !percent, plus !unit (singular) and !units (plural).'),
+        '#default_value' => $settings['format'],
+        '#size' => 40,
+        '#states' => array(
+          // Hide the settings when the include checkbox is disabled.
+          'invisible' => array(
+           ':input[name="fields[field_percentage][settings_edit_form][settings][include]"]' => array('checked' => FALSE),
+          ),
+        ),
+      );
+      break;
+  }
+
+  return $elements;
+}
+
+/**
+ * Implements hook_field_formatter_settings_summary().
+ */
+function percent_field_formatter_settings_summary($field, $instance, $view_mode) {
+  $display = $instance['display'][$view_mode];
+  $settings = $display['settings'];
+  $output = '';
+
+  switch ($display['type']) {
+  	case 'percent_formatted':
+  	  $output = $settings['format'];
+  	  break;
+  	case 'percent_bar':
+  	  if (empty($settings['include'])) {
+  	    $output = t('Progress bar only.');
+  	  }
+  	  else {
+  	    $output = t('Progress bar plus formatted string: !format.', array('!format' => $settings['format']));
+  	  }
+  	  break;
+  	case 'percent_bar_custom':
+  	  if (empty($settings['include'])) {
+  	    $output = t('Progress bar only.');
+  	  }
+  	  else {
+  	    $output = t('Progress bar plus formatted string: !format.', array('!format' => $settings['format']));
+  	  }
+
+  	  $output .= ' ' . t('Background: !bg; Foreground: !fg.', array('!bg' => $settings['background'], '!fg' => $settings['foreground']));
+  	  break;
+  }
+  return $output;
+}
+
+/**
+ * Theme function for 'percent_formatted' field formatter.
+ */
+function theme_percent_formatter_percent_formatted($vars) {
+  $output = '';
+  $args = percent_display_args($vars['element'], $vars['field']['settings']);
+  $args['!format'] = t($vars['display']['settings']['format'], $args);
+
+  $output = '<div class="field-percent field-percent-formatted">';
+  $output .= t("<p class='percent-format'>!format</p>", $args);
+  $output .= '</div>';
+
+  return $output;
+}
+
+/**
+ * Theme function for 'percent_of' field formatter.
+ */
+function theme_percent_formatter_percent_bar($vars) {
+  $output = '';
+  $args = percent_display_args($vars['element'], $vars['field']['settings']);
+  $settings = $vars['display']['settings'];
+  $args['!format'] = t($settings['format'], $args);
+
+  $output = '<div class="field-percent field-percent-bar">';
+  $output .= t('<p class="percent-bar"><progress value="!progress" max="!target"><strong>Completed: !percent% !units</strong></progress></p>', $args);
+  if (!empty($settings['include'])) {
+    $output .= t("<p class='percent-format'>!format</p>", $args);
+  }
+  $output .= '</div>';
+
+  return $output;
+}
+
+/**
+ * Theme function for 'percent_of' field formatter.
+ */
+function theme_percent_formatter_percent_bar_custom($vars) {
+  $output = '';
+  $args = percent_display_args($vars['element'], $vars['field']['settings']);
+  $settings = $vars['display']['settings'];
+  $args += array(
+    '!format' => t($settings['format'], $args),
+    '!bg' => $settings['background'],
+    '!fg' => $settings['foreground'],
+  );
+
+  $output = '<div class="field-percent field-percent-bar">';
+  $output .= t('<p class="percent-bar"><div class="custom-progress-bar" style="background-color:!bg;"><div class="custom-progress-bar-inner" style="background-color:!fg;width:!percent%"></div></div></p>', $args);
+  if (!empty($settings['include'])) {
+    $output .= t("<p class='percent-format'>!format</p>", $args);
+  }
+  $output .= '</div>';
+
+  return $output;
+}

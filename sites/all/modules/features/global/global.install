@@ -1,0 +1,104 @@
+<?php
+
+/**
+ * Implements hook_update_N().
+ * 
+ * Enables webmaster admin module
+ */
+function global_update_7000() {
+  module_enable(array('webmaster_admin'));
+}
+
+/**
+ * Create new terms in measure environment vocabulary
+ */
+function global_update_7001() {
+  $vocabulary = taxonomy_vocabulary_machine_name_load('measure_environmment');
+
+  $term = new stdClass();
+  $vid = $vocabulary->vid;
+  $term->name = 'City' ;
+  $term->vid = $vid;
+  $term->field_term_machine_name['und'][0]['value'] = 'city';
+  taxonomy_term_save($term);
+
+  $term = new stdClass();
+  $vid = $vocabulary->vid;
+  $term->name = 'Country side' ;
+  $term->vid = $vid;
+  $term->field_term_machine_name['und'][0]['value'] = 'countryside';
+  taxonomy_term_save($term);
+
+  $term = new stdClass();
+  $vid = $vocabulary->vid;
+  $term->name = 'Inside' ;
+  $term->vid = $vid;
+  $term->field_term_machine_name['und'][0]['value'] = 'inside';
+  taxonomy_term_save($term);
+
+  $term = new stdClass();
+  $vid = $vocabulary->vid;
+  $term->name = 'On the road' ;
+  $term->vid = $vid;
+  $term->field_term_machine_name['und'][0]['value'] = 'ontheroad';
+  taxonomy_term_save($term);
+
+}
+
+/**
+ * Enable conditional fields module
+ */
+function global_update_7002() {
+  module_enable(array('conditional_fields'));
+}
+
+/**
+ * Add correct taxonomy terms to qualification vocabulary
+ */
+function global_update_7003() {
+
+  $vocabulary = taxonomy_vocabulary_machine_name_load('measure_qualification_type');
+
+  $term = new stdClass();
+  $vid = $vocabulary->vid;
+  $term->name = 'Must be verified' ;
+  $term->vid = $vid;
+  $term->field_term_machine_name['und'][0]['value'] = 'mustbeverified';
+  taxonomy_term_save($term);
+
+  $term = new stdClass();
+  $vid = $vocabulary->vid;
+  $term->name = 'non environnemental Context' ;
+  $term->vid = $vid;
+  $term->field_term_machine_name['und'][0]['value'] = 'noenvironmentalcontext';
+  taxonomy_term_save($term);
+
+  $term = new stdClass();
+  $vid = $vocabulary->vid;
+  $term->name = 'Bad sensor' ;
+  $term->vid = $vid;
+  $term->field_term_machine_name['und'][0]['value'] = 'badsensor';
+  taxonomy_term_save($term);
+
+  $term = new stdClass();
+  $vid = $vocabulary->vid;
+  $term->name = 'Bad protocole' ;
+  $term->vid = $vid;
+  $term->field_term_machine_name['und'][0]['value'] = 'badprotocole';
+  taxonomy_term_save($term);
+
+  $term = new stdClass();
+  $vid = $vocabulary->vid;
+  $term->name = 'Bad datas transmission';
+  $term->vid = $vid;
+  $term->field_term_machine_name['und'][0]['value'] = 'baddatatransmission';
+  taxonomy_term_save($term);
+
+}
+
+/**
+ * Enable vppr module : add taxonomy permissions
+ */
+function global_update_7004() {
+  module_enable(array('vppr'));
+}

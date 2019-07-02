@@ -1,0 +1,9 @@
+.cookie-compliance {
+  background-color: #666;
+  color: #fff;
+  display: none;
+}
+
+.cookie-compliance__inner {
+  padding: 10px 20px;
+}

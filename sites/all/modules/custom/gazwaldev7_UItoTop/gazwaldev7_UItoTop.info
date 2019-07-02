@@ -1,0 +1,6 @@
+name = Gazwal Dev7 UItoTop
+description = Provides jQuery <a href="https://github.com/sksmatt/UItoTop-jQuery-Plugin/">UItoTop</a> integration.
+core = 7.x
+package = Gazwal
+
+dependencies[] = libraries

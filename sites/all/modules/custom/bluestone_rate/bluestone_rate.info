@@ -1,0 +1,6 @@
+name = Bluestone rate
+description = Custom widgets for rate module.
+core = 7.x
+package = Bluestone
+version = "7.x-1.0-beta1"
+dependencies[] = rate

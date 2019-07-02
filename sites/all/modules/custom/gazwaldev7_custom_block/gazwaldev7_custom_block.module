@@ -1,0 +1,90 @@
+<?php
+/**
+ * Implements hook_block_info().
+ */
+function gazwaldev7_custom_block_block_info() {
+  $blocks = array();
+  $blocks['custom_home_01'] = array(
+    'info' => t('CUSTOM - Home - Carte de France des mesures'),
+  );
+  $blocks['custom_home_02'] = array(
+    'info' => t('CUSTOM - Home / Sidebar - Inscription & Connexion'),
+  );
+  $blocks['custom_home_03'] = array(
+    'info' => t('CUSTOM #3 - Home / Sidebar - Fabriquer son capteur + Téléchargez l\'application'),
+  );
+  $blocks['custom_home_04'] = array(
+    'info' => t('CUSTOM #4 - Footer - Adresse + Réseaux sociaux'),
+  );
+  $blocks['openradiation_map'] = array(
+    'info' => t('Openradiation map'),
+  );
+  return $blocks;
+}
+
+/**
+ * Implements hook_block_view().
+ */
+function gazwaldev7_custom_block_block_view($delta = '') {
+  $block = array();
+  $url = variable_get('openradiation_server_rest_request_api_url', '');
+  switch($delta) {
+    case 'custom_home_01' :
+      $block['subject'] = '';
+      $variables = [];
+      $block['content'] = theme('template_home_01', $variables);
+      break;
+    case 'custom_home_02' :
+      $block['subject'] = '';
+      $variables = [];
+      $block['content'] = theme('template_home_02', $variables);
+      break;
+    case 'custom_home_03' :
+      $block['subject'] = '';
+      $variables = [];
+      $block['content'] = theme('template_home_03', $variables);
+      break;
+    case 'custom_home_04' :
+      $block['subject'] = '';
+      $variables = [];
+      $block['content'] = theme('template_home_04', $variables);
+      break;
+    case "openradiation_map" :
+      $block['subject'] = '';
+      $block['content'] = '<iframe
+      id="openradiation-map-iframe"
+      frameborder="0"
+      style="overflow:hidden"
+      height="700px"
+      width="100%"
+      src="'.$url.'/openradiation">
+      </iframe>';
+  }
+
+  return $block;
+}
+
+
+/**
+ * Implements hook_theme().
+ */
+function gazwaldev7_custom_block_theme() {
+  return array(
+    'template_home_01' => array(
+      'variables' => array(),
+      'template' => 'template_home_01',
+    ),
+    'template_home_02' => array(
+      'variables' => array(),
+      'template' => 'template_home_02',
+    ),
+    'template_home_03' => array(
+      'variables' => array(),
+      'template' => 'template_home_03',
+    ),
+    'template_home_04' => array(
+      'variables' => array(),
+      'template' => 'template_home_04',
+    ),
+  );
+}

@@ -1,0 +1,5 @@
+name = Bluestone Book Tree
+description = "Affiche toute la hiérarchie du livre courant"
+package = Bluestone 
+core = 7.x
+dependencies[] = book

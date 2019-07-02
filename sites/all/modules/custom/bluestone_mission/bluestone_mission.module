@@ -1,0 +1,436 @@
+<?php
+
+/**
+ * Implements hook_init()
+ */
+function bluestone_mission_init() {
+
+  // remove confusing breadcrumb on missions.
+  if (arg(0) == 'node' && is_numeric(arg(1))) {
+    $node = node_load(arg(1));
+    if ($node && $node->type == 'mission') {
+         // for all node/%/% url ( like node/31/Discussion or node/31/blog, that are views)
+        if (arg(2)) {  
+            // if group_access == "1" : this mission is PRIVATE and so we have to denied access
+            // if user is not a member from this mission
+            if (!empty($node->group_access['und']) && $node->group_access['und'][0]['value'] == 1 && !og_is_member('node', arg(1))) {
+              drupal_access_denied();
+              drupal_exit();
+            }
+        }
+    }
+  }
+
+  // remove confusing breadcrumb on node/add forms, when adding a content to a mission group.
+  if (isset($_GET['og_group_ref'])) {
+    //drupal_set_breadcrumb([]);
+    drupal_set_breadcrumb(array());
+  }
+
+}
+
+
+/**
+ * Implements hook_node_access().
+ * Autorise l'affichage d'une mission, même si elle est privée
+ */
+function bluestone_mission_node_access($node, $op, $account = NULL) {
+  global $user;
+  if (empty($account)) {
+    $account = $user;
+  }
+  //krumodev($node);
+  // Ignore non-Mission node.
+  if ((is_object($node) ? $node->type : $node) !== 'mission') {
+    return NODE_ACCESS_IGNORE;
+  }
+
+  if (($op == 'view') && ($node->status == NODE_PUBLISHED)) {
+    return NODE_ACCESS_ALLOW;
+  }
+  return NODE_ACCESS_IGNORE;
+}
+
+
+/**
+ * Implements hook_block_info()
+ *
+ * Declares block to Drupal
+ */
+function bluestone_mission_block_info() {
+  return [
+    'top_active_missions' => [
+      'info' => t('[widget] Top active missions'),
+    ],
+    'mission_image_block' => [
+      'info' => t('Image de la mission'),
+    ],
+  ];
+}
+
+/**
+ * Implements hook_block_view();
+ *
+ * Define what a block defined in hook_block_info has to display
+ */
+function bluestone_mission_block_view($delta) {
+  $block = [];
+  switch($delta) {
+    case 'top_active_missions':
+        // uncomment those lines to enable a cache for this block !
+
+        // one day of cache for this block, it might be an expensive calcul
+        // $block_cache_time = (60*60)*24;
+        // if ($cached_datas = cache_get("bluestone_top_active_missions")) {
+        //  $datas = $cached_datas->data;
+        //}
+        // else {
+        //
+        $datas = bluestone_mission_get_top_active_mission(5);
+        //cache_set('bluestone_top_active_missions', $datas, 'cache', $block_cache_time); //1 hour
+        //}
+        $block['subject'] = t('Top active missions');
+        $block['content'] = [
+          '#theme' => 'top_active_missions',
+          '#datas' => $datas,
+        ];
+        break;
+    
+    case 'mission_image_block':
+      //load current mission for the template
+      if (arg(0) == 'node' && is_numeric(arg(1))) {
+        $node = node_load(arg(1));
+          if ($node && $node->type == 'mission') {
+            $variables["node"] = $node;
+          }
+      }
+      $block['subject'] = '';
+      //$variables = [];
+      $block['content'] = theme('mission_image_block', $variables);
+      break;
+  }
+  return $block;
+}
+
+/**
+ * Implements hook_theme()
+ *
+ * @param $existing
+ * @param $type
+ * @param $theme
+ * @param $path
+ * @return array
+ */
+function bluestone_mission_theme($existing, $type, $theme, $path) {
+  return [
+    'bluestone_og_tabs' => [
+      'variables' => [],
+      'path' => drupal_get_path("module", "bluestone_mission"). '/templates',
+      'template' => 'bluestone-og-tabs'
+    ],
+    'top_active_missions' => [
+      'variables' => ['datas' => []],
+      'path' => drupal_get_path("module", "bluestone_mission"). '/templates',
+      'template' => 'top-active-missions'
+    ],
+    'mission_image_block' => [
+      'variables' => ['datas' => []],
+      'path' => drupal_get_path("module", "bluestone_mission"). '/templates',
+      'template' => 'mission-image-block'
+    ],
+  ];
+}
+
+/**
+ * Check if a mission has been closed.
+ *
+ * @param $node
+ * @return boolean : TRUE if mission has been closed, FALSE otherwise.
+ */
+function bluestone_mission_is_closed($node) {
+  if (!empty($node->field_mission_closed['und'][0]['value'])) {
+    return TRUE;
+  }
+  return FALSE;
+}
+
+/**
+ * Implements hook_preprocess_hook()
+ *
+ * Prepare tabs for bluestone-og-tabs.tpl.php template.
+ *
+ * @param $variables
+ */
+function bluestone_mission_preprocess_bluestone_og_tabs(&$variables) {
+
+
+  $group = FAlSE;
+  $group_datas = og_context();
+  if ($group_datas) {
+    $group = node_load($group_datas['gid']);
+    $variables["gid"] = $group_datas['gid'];
+    $gid = $group_datas['gid'];
+  }
+
+  //print_r(arg());exit;
+
+  $alias = drupal_get_path_alias();
+  $alias_args = explode("/", $alias);
+  $tabs = [];
+
+  if($group) {
+    //check if mission is private and user is member
+    if ($group->group_access[LANGUAGE_NONE][0]['value'] == 1) {
+        //group is private
+        if (! og_is_member('node', $gid)) {
+            //user is not a member
+            $variables["tabs"] = [];
+            $variables["emptytabs"] = TRUE;
+            return;
+        }
+    }
+    //krumodev($group);
+
+    // check which tabs admin wants to display:
+    $enabled_tabs = [];
+    if (!empty($group->field_mission_active_tabs['und'])) {
+      foreach ($group->field_mission_active_tabs['und'] as $datas) {
+        $enabled_tabs[] = $datas['value'];
+      }
+    }
+
+
+    // display accueil tab only if there are some tabs (discussion, wiki and such) are enabled.
+    if ($enabled_tabs) {
+      $tabs[0] = [
+        "url" => 'node/' . $group->nid,
+        "title" => t('home'),
+        "is_active" => function() use ($group) {
+            return arg(0) == 'node' && arg(1) == $group->nid && !arg(2);
+          }
+      ];
+    }
+
+    if (in_array('discussion', $enabled_tabs)) {
+      $tabs[1] = [
+        "url" => 'node/' . $group->nid . '/discussion',
+        "title" => t('Discussions'),
+        'is_active' => function() use ($group, $alias_args) {
+            if (arg(0) == 'node' && arg(1) == $group->nid && arg(2) == 'discussion') {
+              return TRUE;
+            }
+            if ($alias_args[0] == 'node' &&  isset($alias_args[2]) && $alias_args[2] == 'discussion') {
+              return TRUE;
+            }
+            // node/add forms ...
+            if (arg(2) == 'og-discussion') {
+              return TRUE;
+            }
+            return FALSE;
+          },
+      ];
+    }
+
+    if (in_array('wiki', $enabled_tabs)) {
+      $tabs[2] = [
+        "url" => 'node/' . $group->nid . '/wiki',
+        "title" => t('Wiki'),
+        'is_active' => function() use ($group, $alias_args) {
+            if (arg(0) == 'node' && arg(1) == $group->nid && arg(2) == 'wiki') {
+              return TRUE;
+            }
+            if ($alias_args[0] == 'node' &&  isset($alias_args[2]) && $alias_args[2] == 'wiki') {
+              return TRUE;
+            }
+            // on node/add forms
+            if (arg(2) == 'og-wiki') {
+              return TRUE;
+            }
+            return FALSE;
+          }
+      ];
+    }
+
+    if (in_array('document', $enabled_tabs)) {
+      $tabs[3] = [
+        "url" => 'node/' . $group->nid . '/document',
+        "title" => t('Shared files'),
+        'is_active' => function() use ($group, $alias_args) {
+            if (arg(0) == 'node' && arg(1) == $group->nid && arg(2) == 'document') {
+              return TRUE;
+            }
+            if ($alias_args[0] == 'node' &&  isset($alias_args[2]) && $alias_args[2] == 'document') {
+              return TRUE;
+            }
+            // on node/add forms ...
+            if (arg(2) == 'og-document') {
+              return TRUE;
+            }
+            return FALSE;
+          }
+      ];
+    }
+
+    if (in_array('blog', $enabled_tabs)) {
+      $tabs[4] = [
+        "url" => 'node/' . $group->nid . '/blog',
+        "title" => t('Blog'),
+        'is_active' => function() use ($group, $alias_args) {
+            if (arg(0) == 'mission' && arg(1) == $group->nid && arg(2) == 'blog') {
+              return TRUE;
+            }
+            if ($alias_args[0] == 'node' &&  isset($alias_args[2]) && $alias_args[2] == 'blog') {
+              return TRUE;
+            }
+            // on node/add/forms ...
+            if (arg(2) == 'og-blog-post') {
+              return TRUE;
+            }
+            return FALSE;
+          }
+      ];
+    }
+
+  }
+
+  $variables["tabs"] = $tabs;
+
+  return;
+}
+
+/**
+ * Implements hook_preprocess_node()
+ *
+ * @param $node
+ */
+function bluestone_mission_preprocess_node(&$node) {
+  $title = $node['title'];
+  $og_context = og_context();
+  if (isset($og_context["gid"]) && is_numeric($og_context["gid"])) {
+    $node_group = node_load($og_context["gid"]);
+    drupal_set_title($node_group->title." - ".$title);
+  }
+}
+
+/**
+ * Get all published missions, filtered by language
+ *
+ * @param int $limit : limit query results
+ * @param array $conditions : additional conditions if needed.
+ * @param $language : filter by language. Current language by default. use "*" for "all languages".
+ * @return array of arrays;
+ */
+function bluestone_mission_get_missions($limit = 0, $conditions = [], $language = null) {
+
+  if (!$language) {
+    $language = $GLOBALS['language']->language;
+  }
+
+  // get all published mission first
+  $query = db_select('node', 'n');
+  $query->addField('n', 'nid');
+  $query->condition("n.type", "mission");
+  $query->condition("n.type", "mission");
+
+  if ($language != "*") {
+    $query->condition("n.language", $language);
+  }
+
+  // optionnal conditions
+  if ($conditions) {
+    foreach ($conditions as $field => $value) {
+      $query->condition($field, $value);
+    }
+  }
+
+  // optionnal limit
+  if ($limit) {
+    $query->range(0, $limit);
+  }
+  $result = $query->execute();
+
+  $datas = [];
+  foreach ($result as $row) {
+    $datas[$row->nid] = (array)$row;
+  }
+
+  return $datas;
+}
+
+/**
+ * Get all nodes belonging to a mission
+ *
+ * @param int $gid
+ * @param array $conditions : array of optionnal conditions, for example :
+ *   $conditions = [
+ *     'node.created' => [
+ *        'value' => 178679870,
+ *        'operator' => '<'
+ *     ]
+ *   ]
+ * @return array
+ */
+function bluestone_mission_get_group_contents_since_one_month($gid, $conditions = []) {
+
+  $one_month_in_seconds = ((60*60) * 24) * 30;
+  $timestamp_one_month_ago = time() - $one_month_in_seconds;
+
+  $query = db_select("og_membership", "ogm");
+  $query->condition("ogm.gid", $gid);
+  $query->condition("entity_type", ['node'], 'IN');
+  $query->condition("group_type", "node");
+  $query->fields("ogm", ["etid", "entity_type"]);
+  $query->condition('ogm.created', $timestamp_one_month_ago, '>=');
+
+  $result = $query->execute();
+  $datas = [];
+  foreach ($result as $row) {
+    $datas[] = (array) $row;
+  }
+  return $datas;
+
+}
+/**
+ * @param (int) $nid
+ * @return mixed : FALSE or int
+ */
+function bluestone_count_comments_from_node_since_one_month($nid) {
+  // get one month in seconds
+  $one_month_in_seconds = ((60*60) * 24) * 30;
+  $timestamp_one_month_ago = time() - $one_month_in_seconds;
+  return db_query("
+  SELECT COUNT(cid) AS count
+  FROM {comment}
+  WHERE nid =:nid
+  AND comment.created >= :timestamp
+  ",
+    [":nid"=> $nid, ':timestamp' => $timestamp_one_month_ago])->fetchField();
+}
+
+/**
+ * Get nids of the most active missions.
+ */
+function bluestone_mission_get_top_active_mission($limit = 5) {
+
+  $datas = bluestone_mission_get_missions($limit);
+
+  foreach ($datas as $i => $row) {
+    $group_contents = bluestone_mission_get_group_contents_since_one_month($row['nid']);
+    $datas[$i]['count_contents'] = count($group_contents);
+    $datas[$i]['count_comments'] = 0;
+    foreach ($group_contents as $group_content) {
+      $datas[$i]['count_comments'] += bluestone_count_comments_from_node_since_one_month($group_content['etid']);
+    }
+    // we store total in a "weight" property so that we can use "drupal_sort_weight" function.
+    // and use minus sign because we want heavier weight to be sorted first.
+    $datas[$i]['weight'] = -($datas[$i]['count_contents'] + $datas[$i]['count_comments']);
+  }
+
+  uasort($datas, 'drupal_sort_weight');
+
+  $datas = array_slice($datas, 0, $limit);
+
+  return $datas;
+
+}
+

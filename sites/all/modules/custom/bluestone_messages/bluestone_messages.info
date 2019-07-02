@@ -1,0 +1,12 @@
+; $Id$
+name = Bluestone messages
+core = 7.x
+dependencies[] = "entityreference"
+dependencies[] = "features"
+dependencies[] = "list"
+dependencies[] = "message"
+dependencies[] = "og"
+dependencies[] = "views"
+description = "Message integration with Organic groups example."
+package = Bluestone
+version = "7.x-1.0-beta1"

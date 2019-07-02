@@ -1,0 +1,7 @@
+; $Id$
+name = Bluestone OG Token
+description = Crée un token pour l'Id de l'OG en cours
+core = 7.x
+dependencies[] = og
+package = Bluestone
+version = "7.x-1.0"

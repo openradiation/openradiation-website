@@ -1,0 +1,208 @@
+// ###################################################################################
+// Sidebar en Home  - block-gazwaldev7-custom-block-custom-home-02  LOGIN / CONNEXION
+// ###################################################################################
+#block-gazwaldev7-custom-block-custom-home-02 {
+    margin-bottom: 20px;
+    // left
+    .login-left {
+    	text-align: center;
+    	padding: 15px 10px;
+    	p {
+    		color: #1660aa;
+    	}
+    	a.btn {
+    		text-transform: uppercase;
+    	}
+    }
+    
+    // right
+    .login-right {
+    	padding: 15px 0px;
+    	label {
+    		font-weight: normal;
+    		color: #1660aa;
+    	}
+    	input {
+    		padding: 3px;
+    		margin-bottom: 5px;
+    		height: auto;
+            /*width: 100%;*/
+    	}
+    	button#edit-submit {
+    		 background-color: #009fd1;
+			 border-color: #008cb7;
+			 color: #fff;
+			 text-transform: uppercase;
+    	}
+    	ul {
+    		padding: 0;
+    		margin: 0 0 3px 0;
+    		li {
+    			list-style: none;
+    			list-style-type: none;
+    			list-style-image: none;
+    			a {
+    				font-size: 12px;
+    				color: #989899;
+    			}
+    		}
+    	}
+    }
+}
+
+// ###################################################################################
+// Sidebar en Home  - block-gazwaldev7-custom-block-custom-home-03
+// ###################################################################################
+#block-gazwaldev7-custom-block-custom-home-03 {
+    margin-bottom: 20px;
+    @include clearfix;
+    // breakpoints
+    // sm - Small devices (tablets, 768px and up)
+    @media (min-width: 768px) {
+    	margin-bottom: 0;
+    }
+    .wrapper {
+        background-color: $mauve;
+        .capteur,
+        .app {
+            display: block;
+            background-color: $mauve;
+            text-transform: uppercase;
+            color: white;
+            &:hover {
+                text-decoration: none;
+            }
+        }
+        .capteur {
+            background: $mauve url(../images/fabriquer-son-capteur.png) no-repeat 5px center;
+            padding-left: 57px;
+            line-height: 50px;
+            // Breakpoints
+            // sm - Small devices (tablets, 768px and up)
+            @media (min-width: 768px) {
+            	line-height: inherit;
+            	padding: 10px 0 10px 57px;
+            }
+            // md - Medium devices (desktops, 992px and up)
+            @media (min-width: 992px) {
+            	padding: 20px 0 20px 57px;
+            }
+            // lg - Large devices (large desktops, 1200px and up)
+            @media (min-width: 1200px) {
+            	padding: 10px 0 10px 57px;
+            	float: left;
+            	width: 50%;
+            	border-right: 1px solid white;
+            }
+        }
+        .app {
+            background: $mauve url(../images/telecharger-application.png) no-repeat 5px center;
+            padding-left: 40px;
+            line-height: 50px;
+            // Breakpoints
+            // sm - Small devices (tablets, 768px and up)
+            @media (min-width: 768px) {
+            	line-height: inherit;
+            	padding: 10px 0 10px 40px;
+            }
+            // md - Medium devices (desktops, 992px and up)
+            @media (min-width: 992px) {
+            	padding: 20px 0 20px 40px;
+            }
+            // lg - Large devices (large desktops, 1200px and up)
+            @media (min-width: 1200px) {
+            	padding: 10px 0 10px 40px;
+            	float: left;
+            	width: 50%;
+            }
+        }
+    }
+}
+
+// ###################################################################################
+// Sidebar en Home  - block des news - block-views-front-news-block-news
+// ###################################################################################
+#block-views-front-news-block-news {
+	border-bottom: 6px solid #009fd1;
+	
+	.block-title, .block-title a {
+		margin: 0;
+		text-align: center;
+		text-transform: uppercase;
+		color: white;
+		background-color: #009fd1;
+		padding: 10px 0;
+		font-size: 16px;
+		line-height: 16px;
+	}
+    .block-title a {
+        padding: 0;
+    }
+	.front_news-block_news {
+		.view-content {
+			padding: 20px 10px;
+			.views-row {
+				margin-bottom: 10px;
+				@include clearfix;
+				// date
+				span.views-field-created {
+					@include border-top-radius(2px);
+					@include border-right-radius(2px);
+					@include border-bottom-radius(2px);
+					@include border-left-radius(2px);
+					background-color: #009fd1;
+					display: inline-block;
+					padding: 2px 3px;
+					color: white;
+					margin-bottom: 5px;
+					// Breakpoints
+					// sm - Small devices (tablets, 768px and up)
+					@media (min-width: 768px) {
+						
+					}
+					// md - Medium devices (desktops, 992px and up)
+					@media (min-width: 992px) {
+						margin-bottom: 0;
+					}
+					// lg - Large devices (large desktops, 1200px and up)
+					@media (min-width: 1200px) {
+						
+					}
+				}
+				// actu
+				span.views-field-title {
+
+					display: block;
+					// Breakpoints
+					// sm - Small devices (tablets, 768px and up)
+					@media (min-width: 768px) {
+						
+					}
+					// md - Medium devices (desktops, 992px and up)
+					@media (min-width: 992px) {
+                        padding-left: 10px;
+						border-top: 2px solid #009fd1;
+						padding-top: 3px;
+					}
+					// lg - Large devices (large desktops, 1200px and up)
+					@media (min-width: 1200px) {
+						padding-left: 0px;
+					}
+				}
+			}
+			.views-row-last {
+				margin-bottom: 0;
+			}
+		}
+	}
+}
+
+
+
+
+
+
+
+
+
+

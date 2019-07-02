@@ -1,0 +1,56 @@
+<?php
+/**
+ * Implements hook_block_info().
+ */
+function bluestone_mission_adminblock_block_info() {
+  $blocks = array();
+  $blocks['bluestone_mission_adminblock'] = array(
+    'info' => t('Mission - Bloc d\'administration pour les animateurs'),
+  );
+  return $blocks;
+}
+
+/**
+ * Implements hook_block_view().
+ */
+function bluestone_mission_adminblock_block_view($delta = '') {
+  $block = array();
+  switch($delta) {
+    case 'bluestone_mission_adminblock' :
+      $block['subject'] = '';
+      $variables = [];
+      $block['content'] = theme('template_mission_adminblock', $variables);
+      break;
+   }
+
+  return $block;
+}
+
+
+/**
+ * Implements hook_theme().
+ */
+function bluestone_mission_adminblock_theme() {
+  return array(
+    'template_mission_adminblock' => array(
+      'variables' => array(),
+      'template' => 'template_mission_adminblock',
+    ),
+ );
+}
+
+/**
+ * Overrides og_local_menu.
+ * Supprime l'onglet "Groupe" dans les sous-onglets de la mission
+ */
+function bluestone_mission_adminblock_preprocess_page(&$variables) {
+  global $user;
+
+  if (is_array($variables['tabs']['#primary'])) {
+    foreach ($variables['tabs']['#primary'] as $key => $link) {
+      if (('node/%/group' == $link['#link']['path']) and (!bluestone_is_admin())) {
+        unset($variables['tabs']['#primary'][$key]);
+      }
+    }
+  }
+}

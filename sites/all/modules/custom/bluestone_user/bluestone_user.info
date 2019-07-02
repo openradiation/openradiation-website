@@ -1,0 +1,5 @@
+name = bluestone user
+core = 7.x
+description = User and profiles on openradiation
+package = Bluestone
+version = "7.x-1.0-beta1"

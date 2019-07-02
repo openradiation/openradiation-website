@@ -1,0 +1,11 @@
+// #################################
+
+#navbar {
+    border: none;
+    .logo {
+        //width: 40px;
+        @media (min-width: 768px) {
+            //width: 60px;
+        }
+    }
+}

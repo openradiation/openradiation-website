@@ -1,0 +1,6 @@
+name = Administration for webmaster
+core = 7.x
+description = "Webmaster administration tweaks"
+package = Bluestone
+version = "7.x-1.0-beta1"
+dependencies[] = bluestone_global

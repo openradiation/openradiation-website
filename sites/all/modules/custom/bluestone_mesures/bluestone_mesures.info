@@ -1,0 +1,8 @@
+; $Id$
+name = Bluestone mesures
+description = Handle measurements on openradiation site.
+core = 7.x
+package = Bluestone
+version = "7.x-1.0-beta1"
+scripts[] = bluestone_mesures.js
+dependencies[] = rate

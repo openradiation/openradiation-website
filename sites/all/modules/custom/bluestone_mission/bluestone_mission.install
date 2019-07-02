@@ -1,0 +1,11 @@
+<?php
+
+/**
+ * Set bluestone_mission weight to 999 in system table.
+ */
+function bluestone_mission_update_7002() {
+  db_update('system')
+    ->fields(array('weight' => 9999))
+    ->condition('name', 'bluestone_mission', '=')
+    ->execute();
+}

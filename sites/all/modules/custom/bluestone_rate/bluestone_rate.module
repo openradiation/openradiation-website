@@ -1,0 +1,77 @@
+<?php
+
+/**
+ * Implements hook_rate_templates
+ *
+ * Define templates for rate widgets.
+ *
+ * @return array
+ */
+function bluestone_rate_rate_templates() {
+  $templates = array();
+
+  $templates['bluestone_thumbs_up_down'] = new stdClass();
+  $templates['bluestone_thumbs_up_down']->value_type = 'points';
+  $templates['bluestone_thumbs_up_down']->options = array(
+    array(1, 'up'),
+    array(-1, 'down'),
+  );
+  $templates['bluestone_thumbs_up_down']->theme = 'bluestone_thumbs_up_down';
+  $templates['bluestone_thumbs_up_down']->css = drupal_get_path('module', 'bluestone_rate') . '/templates/bluestone_thumbs_up_down/thumbs-up-down.css';
+  $templates['bluestone_thumbs_up_down']->customizable = FALSE;
+  $templates['bluestone_thumbs_up_down']->translate = TRUE;
+  $templates['bluestone_thumbs_up_down']->template_title = t('Bluestone thumbs up / down');
+
+  return $templates;
+}
+
+/**
+ * Implements hook_theme()
+ */
+function bluestone_rate_theme() {
+  return array(
+    'bluestone_thumbs_up_down' => array(
+      'variables' => array('links' => NULL, 'results' => NULL, 'mode' => NULL, 'just_voted' => FALSE, 'content_type' => NULL, 'content_id' => NULL, 'display_options' => NULL),
+      'template' => 'bluestone_thumbs_up_down',
+      'path' => drupal_get_path('module', 'bluestone_rate') . '/templates/bluestone_thumbs_up_down',
+    ),
+  );
+}
+
+/**
+ * Implements hook_preprocess_hook
+ * Prepare variables for bluestone_thumbs_up_down template
+ */
+function bluestone_rate_preprocess_bluestone_thumbs_up_down(&$variables) {
+  extract($variables);
+
+  $up_classes = 'bluestone-rate-thumbs-up-down-btn-up';
+  $down_classes = 'bluestone-rate-thumbs-up-down-btn-down';
+  if (isset($results['user_vote'])) {
+    switch ($results['user_vote']) {
+      case $links[0]['value']:
+        $up_classes .= ' rate-voted';
+        break;
+      case $links[1]['value']:
+        $down_classes .= ' rate-voted';
+        break;
+    }
+  }
+
+  $links[0]['text'] = "+1";
+  $links[1]['text'] = "-1";
+
+  $variables['up_button'] = theme('rate_button', array('text' => $links[0]['text'], 'href' => $links[0]['href'], 'class' => $up_classes));
+  $variables['down_button'] = theme('rate_button', array('text' => $links[1]['text'], 'href' => $links[1]['href'], 'class' => $down_classes));
+
+  $info = array();
+  if ($mode == RATE_CLOSED) {
+    $info[] = t('Voting is closed.');
+  }
+  if ($mode != RATE_COMPACT && $mode != RATE_COMPACT_DISABLED) {
+    if (isset($results['user_vote'])) {
+      $info[] = t('You voted \'@option\'.', array('@option' => $results['user_vote'] == 1 ? $links[0]['text'] : $links[1]['text']));
+    }
+  }
+  $variables['info'] = implode(' ', $info);
+}

@@ -1,0 +1,20 @@
+<?php
+/**
+ * Implements hook_preprocess_node().
+ *
+ */
+function gazwaldev7_UItoTop_preprocess_page(&$variables) {
+
+	$library = libraries_get_libraries();
+	$module_path = drupal_get_path('module','gazwaldev7_UItoTop');
+
+	if (isset($library['UItoTop'])) {
+		$path = $library['UItoTop'];
+		drupal_add_css($path . '/css/ui.totop.css');
+		drupal_add_js($path . '/js/easing.js');
+		drupal_add_js($path . '/js/jquery.ui.totop.min.js');
+	}
+
+	drupal_add_css($module_path . '/css/gazwaldev7_UItoTop.css');
+	drupal_add_js($module_path . '/js/gazwaldev7_UItoTop.js');
+}

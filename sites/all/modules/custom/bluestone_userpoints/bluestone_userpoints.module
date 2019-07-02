@@ -1,0 +1,272 @@
+<?php
+/**
+ * @file bluestone_userpoints.module
+ * Built on top of userpoints module, this custom module
+ * is using userpoints API to add points to user on specific actions such as :
+ * - posting comments
+ * - posting a qualification
+ * - adding a measurement node
+ * - etc...
+ *
+ * We also provide an admin page (admin/config/people/userpoints/bluestone-points)
+ * to configure how many points to give for all the implemented actions.
+ */
+
+/**
+ * Implements hook_init()
+ */
+function bluestone_userpoints_init() {
+  bluestone_userpoints_get_month_top_contributors();
+}
+
+/**
+ * Implements hook_block_info()
+ *
+ * Declares block to Drupal
+ */
+function bluestone_userpoints_block_info() {
+  return [
+    'top_contributors' => [
+      'info' => t('[widget] Top contributors'),
+    ],
+    'top_month_contributors' => [
+      'info' => t('[widget] Top contributors of the month'),
+    ],
+  ];
+}
+/**
+ * Implements hook_block_view();
+ *
+ * Define what a block defined in hook_block_info has to display
+ */
+function bluestone_userpoints_block_view($delta) {
+
+  $block = [];
+
+  if ($delta == 'top_contributors') {
+    $block['subject'] = t('Top contributors');
+    $datas = bluestone_userspoints_get_top_contributors();
+    $block['content'] = [
+      '#theme' => 'top_contributors',
+      '#datas' => $datas,
+    ];
+  }
+
+  if ($delta == 'top_month_contributors') {
+    $block['subject'] = t('Top month contributors');
+    $datas = bluestone_userspoints_get_top_contributors(strtotime('-30 days'));
+    $block['content'] = [
+      '#theme' => 'top_month_contributors',
+      '#datas' => $datas,
+    ];
+  }
+
+  return $block;
+}
+
+/**
+ * Implements hook_theme().
+ *
+ * Declare templates to Drupal.
+ */
+function bluestone_userpoints_theme() {
+  return [
+    'top_month_contributors' => [
+      'variables' => ['datas' => []],
+      'template' => 'templates/top_month_contributors',
+    ],
+    'top_contributors' => [
+      'variables' => ['datas' => []],
+      'template' => 'templates/top_contributors',
+    ],
+  ];
+}
+
+/**
+ * Implements hook_menu()
+ *
+ * @return array
+ */
+function bluestone_userpoints_menu() {
+  $items = [];
+  $items['admin/config/people/userpoints/bluestone-points'] = [
+    'title' => 'Configure points attribution',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => ['bluestone_userpoints_admin_page_calback'],
+    'file' => "bluestone_userpoints.admin.inc",
+    'access arguments' => ['administer userpoints'],
+    'type' => MENU_LOCAL_TASK,
+  ];
+  return $items;
+}
+
+/**
+ * Implements hook_og_membership_insert()
+ *
+ * Add points when a user is subscribing to any organic group.
+ * @TODO : should we delete those points on "unsubscription" ?
+ *
+ * @param OgMembership $og_membership
+ */
+function bluestone_userpoints_og_membership_insert(OgMembership $og_membership) {
+  if ($og_membership->entity_type == 'user') {
+    $params = array (
+      'uid' => $og_membership->etid,
+      'points' => variable_get('bluestone_userpoints_on_subscribing_mission', 10),
+      'moderate' => FALSE,
+      'description' => 'subscribing to an organic group',
+      'entity_id' => $og_membership->gid,
+      'entity_type' => $og_membership->group_type
+    );
+    userpoints_userpointsapi($params);
+  }
+}
+
+/**
+ * Implements hook_comment_insert()
+ *
+ * Add points when user is adding a comment
+ *
+ * @param $comment
+ */
+function bluestone_userpoints_comment_insert($comment) {
+
+  // fix for comments injected by ajax
+  if (!$comment->uid) $comment->uid = $GLOBALS['user']->uid;
+
+  // adding points for commenting
+  $params = [
+    'uid' => $comment->uid,
+    'points' => variable_get('bluestone_userpoints_on_adding_comment', 10),
+    'moderate' => FALSE,
+    'description' => 'adding a comment',
+    'entity_id' => $comment->cid,
+    'entity_type' => 'comment'
+  ];
+  userpoints_userpointsapi($params);
+
+  // adding points for adding a qualification on a measure
+  if (!empty($comment->field_measure_qualification['und'][0]['tid'])) {
+    $params = [
+      'uid' => $comment->uid,
+      'points' => variable_get('bluestone_userpoints_on_adding_measure_qualification', 10),
+      'moderate' => FALSE,
+      'description' => 'adding a measure qualification',
+      'entity_id' => $comment->cid,
+      'entity_type' => 'comment'
+    ];
+    userpoints_userpointsapi($params);
+  }
+
+
+}
+
+/**
+ * Implements hook_node_insert()
+ *
+ * Add points when user is creating a new measurement node.
+ *
+ * @param $node
+ */
+function bluestone_userpoints_node_insert($node) {
+
+  if ($node->type == 'measurement') {
+    //on vérifie qu'il s'agit d'une insertion par formulaire
+    if (isset($node->form_id) && ('measurement_node_form' == $node->form_id)) {
+        $params = [
+          'uid' => $node->uid,
+          'points' => variable_get('bluestone_userpoints_on_adding_node_measurement', 1),
+          'moderate' => FALSE,
+          'description' => 'adding a measurement',
+          'entity_id' => $node->nid,
+          'entity_type' => 'node'
+        ];
+        userpoints_userpointsapi($params);
+    }
+  }
+
+  if ($node->type == 'og_document') {
+    $params = [
+      'uid' => $node->uid,
+      'points' => variable_get('bluestone_userpoints_on_adding_node_og_document', 20),
+      'moderate' => FALSE,
+      'description' => 'adding a shared document',
+      'entity_id' => $node->nid,
+      'entity_type' => 'node'
+    ];
+    userpoints_userpointsapi($params);
+  }
+
+  if ($node->type == 'og_wiki') {
+    $params = [
+      'uid' => $node->uid,
+      'points' => variable_get('bluestone_userpoints_on_adding_node_og_wiki', 10),
+      'moderate' => FALSE,
+      'description' => 'adding a wiki page',
+      'entity_id' => $node->nid,
+      'entity_type' => 'node'
+    ];
+    userpoints_userpointsapi($params);
+  }
+
+  if ($node->type == 'mission') {
+    $params = [
+      'uid' => $node->uid,
+      'points' => variable_get('bluestone_userpoints_on_adding_node_mission', 20),
+      'moderate' => FALSE,
+      'description' => 'adding a mission',
+      'entity_id' => $node->nid,
+      'entity_type' => 'node'
+    ];
+    userpoints_userpointsapi($params);
+  }
+
+}
+
+/**
+ * Helpers functions
+ */
+
+/**
+ * Return an array of best contributors / users
+ *
+ * @param int $from_timestamp : optionnal : only return top contributors since specified timestamp.
+ * @param int $limit : number of results, 5 by default.
+ * @return array of stdClass results keyed by users id : e.g :
+ * array (
+ *   1 => {
+ *     'uid' => '1', // user id
+ *     'points' => '331', // points collected since specified timestamp
+ *   },
+ *   31 = {
+ *     'uid' => '31',
+ *     'points' => '30',
+ *   },
+ * );
+ */
+function bluestone_userspoints_get_top_contributors($from_timestamp = 0, $limit = 5) {
+
+  $query = db_select('userpoints_txn', 'up');
+  $query->addField('up', 'uid');
+  $query->addExpression('SUM(up.points)', 'points');
+  if ($from_timestamp) {
+    $query->condition('up.time_stamp', $from_timestamp, '>');
+  }
+  $query->groupBy('up.uid');
+  $query->orderBy('points', 'DESC');
+  $query->range(0, $limit);
+  $result = $query->execute();
+  $datas = [];
+  foreach ($result as $row) {
+    $datas[$row->uid] = $row;
+  }
+
+  return $datas;
+
+}
+
+function bluestone_userpoints_get_month_top_contributors() {
+  $from_timestamp = strtotime('-30 days');
+  $result = bluestone_userspoints_get_top_contributors($from_timestamp);
+  return $result;
+}

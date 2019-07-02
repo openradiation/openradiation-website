@@ -1,0 +1,271 @@
+<?php
+
+function bluestone_messages_mail_alter(&$message){
+
+    $from = variable_get('site_name','Openradiation')." <".variable_get('site_mail','noreply@openradiation.org').">";
+    $message['from'] = $from;
+    $message['headers']['From'] = $from;
+    $message['headers']['Sender'] = $from;
+    $message['headers']['Return-Path'] = $from;
+
+}
+
+
+//put into function public function mail(array $message) {
+// file : sites/all/modules/contrib/htmlmail/htmlmail.mail.inc: 202
+function bluestone_log_mail($message)
+{
+  $str = "key : ".$message["key"];
+  $str .= "\r\n";
+  $str .= "to : ".$message["to"];
+  $str .= "\r\n";
+  $str .= "from : ".$message["from"];
+  $str .= "\r\n";
+  $str .= "subject : ".$message["subject"];
+  $str .= "\r\n";
+  $str .= $message["body"];
+  $key = md5($message["key"].$message["subject"].time());
+  file_put_contents(DRUPAL_ROOT.DIRECTORY_SEPARATOR.'mails'.DIRECTORY_SEPARATOR.$message["to"].'_'.$key.'.txt', $str);
+  return true;
+}
+
+/**
+ * Implements hook_entity_info_alter().
+ */
+function bluestone_messages_entity_info_alter(&$entity_info) {
+  $entity_info['comment']['view modes']['mail'] = array(
+    'label' => t('Mail'),
+    'custom settings' => TRUE,
+  );
+}
+
+function bluestone_send_notification($entity_type, $entity, $message) {
+  //message_notify_send_message($message, $options);
+  // message_notify_send_message($message);
+  if (module_exists('message_subscribe')) {
+    // If Message-subscribe exists, let this example module use it.
+    //message_subscribe_send_message($entity_type, $entity, $message, array('email' => $options));
+    message_subscribe_send_message($entity_type, $entity, $message);
+  }
+  else {
+    if ($GLOBALS['user']->uid == 1) {
+      drupal_set_message("Dear super admin, you must enable message_subscribe module to enable notification", "warning");
+    }
+  }
+}
+
+
+/**
+ * Implements hook_comment_insert()
+ *
+ * @param $comment
+ */
+function bluestone_messages_comment_insert($comment) {
+
+  $node = node_load($comment->nid);
+
+  if ($comment->uid == $node->uid) {
+    // The comment author is also the node author, and we would ususally
+    // return early here, but since this is an example, we send an email
+    // anyway.
+    //return;
+  }
+
+  // Envoyer un nouveau commentaire,
+  if($node->type == "measurement")
+  {
+    $message = message_create('new_comment_measure', array('uid' => $node->uid));
+    $wrapper = entity_metadata_wrapper('message', $message);
+    $wrapper->field_comment_ref->set($comment);
+    $wrapper->field_measure_ref->set($node);
+    bluestone_send_notification('comment', $comment, $message);
+  }
+  elseif(in_array($node->type, array("og_news", "og_discussion", "og_wiki", "og_document", "og_blog")))
+  {
+    list(,, $bundle) = entity_extract_ids('node', $node);
+    if (!og_is_group_content_type('node', $bundle)) {
+      return;
+    }
+
+    $wrapper = entity_metadata_wrapper('node', $node);
+    if (!$wrapper->{'og_membership__' . OG_STATE_ACTIVE}->value()) {
+      // Node isn't associate, or doesn't have an active association with
+      // any group.
+      return;
+    }
+
+    $nids = array();
+    foreach ($wrapper->{'og_membership__' . OG_STATE_ACTIVE}->value() as $og_membership) {
+      if ($og_membership->group_type != 'node') {
+        // For simplicity we operate only on membership with node groups.
+        continue;
+      }
+      $nids[] = $og_membership->gid;
+    }
+
+    if (!$nids) {
+      return;
+    }
+
+    $arguments['!groups'] = array(
+      'callback' => 'bluestone_messages_group_list',
+      'pass message' => TRUE,
+    );
+    $message = message_create('new_comment_group_content', array('arguments' => $arguments, 'uid' => $node->uid));
+    $wrapper = entity_metadata_wrapper('message', $message);
+    $wrapper->field_node_ref->set($node);
+    $wrapper->og_group_ref->set($nids);
+    $wrapper->field_comment_ref->set($comment);
+    bluestone_send_notification('comment', $comment, $message);
+  }
+  else
+  {
+    return;
+  }
+
+
+}
+
+
+function bluestone_messages_og_membership_insert($og_membership) {
+  if ($og_membership->state != OG_STATE_ACTIVE || $og_membership->entity_type != 'user') {
+    // Membership isn't active.
+    return;
+  }
+
+  if ($og_membership->group_type != 'node') {
+    // For simplicity we operate only on membership with node groups.
+    return;
+  }
+
+  if (!$og_membership->etid) {
+    // Don't capture membership of anonymous user, that might be caused
+    // when using Devel generate.
+    return;
+  }
+
+  $node = node_load($og_membership->gid);
+  // Create a "User joined" message.
+  $message = message_create('og_user_membership', array('uid' => $og_membership->etid));
+
+  $wrapper = entity_metadata_wrapper('message', $message);
+  $wrapper->og_group_ref[] = $node;
+  bluestone_send_notification('og_membership', $og_membership, $message);
+}
+
+
+function bluestone_messages_node_insert($node) {
+
+  if(in_array($node->type, array("og_news", "og_discussion", "og_wiki", "og_document")))
+  {
+    list(,, $bundle) = entity_extract_ids('node', $node);
+    if (!og_is_group_content_type('node', $bundle)) {
+      return;
+    }
+
+    $wrapper = entity_metadata_wrapper('node', $node);
+    if (!$wrapper->{'og_membership__' . OG_STATE_ACTIVE}->value()) {
+      // Node isn't associate, or doesn't have an active association with
+      // any group.
+      return;
+    }
+
+    $nids = array();
+    foreach ($wrapper->{'og_membership__' . OG_STATE_ACTIVE}->value() as $og_membership) {
+      if ($og_membership->group_type != 'node') {
+        // For simplicity we operate only on membership with node groups.
+        continue;
+      }
+      $nids[] = $og_membership->gid;
+    }
+
+    if (!$nids) {
+      return;
+    }
+
+    // Create a "Post in group" message. We don't use a token replacement
+    // here as it needs to get the data from multiple values of the field.
+    // Furthermore, this replacement probably doesn't make sense outside of
+    // this message-type context, so we don't want to add another token,
+    // that will not be used.
+    $arguments['!groups'] = array(
+      'callback' => 'bluestone_messages_group_list',
+      'pass message' => TRUE,
+    );
+    $message = message_create('new_group_content', array('arguments' => $arguments, 'uid' => $node->uid));
+
+    $wrapper = entity_metadata_wrapper('message', $message);
+    $wrapper->field_node_ref->set($node);
+    $wrapper->og_group_ref->set($nids);
+    bluestone_send_notification('node', $node, $message);
+  }
+
+
+}
+
+function bluestone_messages_node_update($node) {
+  if($node->type == "measurement")
+  {
+    $message = message_create('measurement_update', array('uid' => $node->uid));
+    $wrapper = entity_metadata_wrapper('message', $message);
+    $wrapper->field_measure_ref->set($node);
+  }
+  elseif(in_array($node->type, array("og_news", "og_discussion", "og_wiki", "og_document")))
+  {
+    list(,, $bundle) = entity_extract_ids('node', $node);
+    if (!og_is_group_content_type('node', $bundle)) {
+      return;
+    }
+
+    $wrapper = entity_metadata_wrapper('node', $node);
+    if (!$wrapper->{'og_membership__' . OG_STATE_ACTIVE}->value()) {
+      // Node isn't associate, or doesn't have an active association with
+      // any group.
+      return;
+    }
+
+    $nids = array();
+    foreach ($wrapper->{'og_membership__' . OG_STATE_ACTIVE}->value() as $og_membership) {
+      if ($og_membership->group_type != 'node') {
+        // For simplicity we operate only on membership with node groups.
+        continue;
+      }
+      $nids[] = $og_membership->gid;
+    }
+
+    if (!$nids) {
+      return;
+    }
+
+    $arguments['!groups'] = array(
+      'callback' => 'bluestone_messages_group_list',
+      'pass message' => TRUE,
+    );
+    $message = message_create('group_content_update', array('arguments' => $arguments, 'uid' => $node->uid));
+    $wrapper = entity_metadata_wrapper('message', $message);
+    $wrapper->field_node_ref->set($node);
+    $wrapper->og_group_ref->set($nids);
+  }
+  else
+  {
+    return;
+  }
+}
+
+
+function bluestone_messages_group_list(Message $message) {
+  $wrapper = entity_metadata_wrapper('message', $message);
+  $items = array();
+  foreach ($wrapper->og_group_ref->value() as $node) {
+    if (!node_access('view', $node)) {
+      // User doesn't have access to view the group.
+      continue;
+    }
+    $url = entity_uri('node', $node);
+    $label = entity_label('node', $node);
+    $items[] = l($label, $url['path'], $url['options']);
+  }
+  return implode(', ', $items);
+}
+
+

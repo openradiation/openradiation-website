@@ -1,0 +1,53 @@
+<?php
+
+function bluestone_theming_init()
+{
+
+        drupal_add_css(drupal_get_path("module", "bluestone_theming").DIRECTORY_SEPARATOR."bluestone_theming.css");
+
+}
+
+function bluestone_theming_theme($existing, $type, $theme, $path) {
+    return array(
+        'bluestone_menu' => array(
+            'variables' => array(
+            ),
+            'path' => drupal_get_path("module", "bluestone_theming").DIRECTORY_SEPARATOR.'templates',
+            'template' => 'menu'
+        ),
+        'bluestone_title_nav' => array(
+            'variables' => array(
+            ),
+            'path' => drupal_get_path("module", "bluestone_theming").DIRECTORY_SEPARATOR.'templates',
+            'template' => 'bluestone-title-nav'
+        )
+    );
+}
+
+function bluestone_theming_form_alter(&$form, $form_state, $form_id)
+{
+    if($form_id == "comment_node_measurement_form")
+    {
+        $form["author"]["#prefix"] = '<div style="display:none">';
+        $form["author"]["#suffix"] = '</div>';
+        $form['comment_body'][LANGUAGE_NONE][0]['value']['#title'] = "";
+        unset($form['actions']['preview']);
+        $form['actions']['submit']['#value'] = t('Valider');
+    }
+
+  // add placeholder to prefill fields, only keep "lost password link" (remove user/register link)
+    if ($form_id == 'user_login_block')
+    {
+
+      $form['name']['#attributes']['placeholder'] = $form['name']['#title'];
+      $form['pass']['#attributes']['placeholder'] = $form['pass']['#title'];
+
+      $links = array(l(t('Lost your password ?'), 'user/password'));
+      $form['links']['#markup'] = theme('item_list', array('items' => $links));
+      // put lost password link below the login button
+      $form['links']['#weight'] = 999;
+
+    }
+}
+
+

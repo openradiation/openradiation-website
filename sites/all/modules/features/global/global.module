@@ -1,0 +1,7 @@
+<?php
+/**
+ * @file
+ * Code for the global feature.
+ */
+
+include_once 'global.features.inc';

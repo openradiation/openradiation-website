@@ -1,0 +1,5 @@
+name = bluestone global
+core = 7.x
+description = "global helpers and functions"
+package = Bluestone
+version = "7.x-1.0-beta1"

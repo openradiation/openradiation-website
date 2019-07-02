@@ -1,0 +1,5 @@
+name = Bluestone Privatemsg Recipient
+core = 7.x
+description = "Seuls le webmaster et l'admin peuvent modifier les destinataires des messages privés"
+package = Bluestone
+version = "7.x-1.0"

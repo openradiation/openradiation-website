@@ -1,0 +1,64 @@
+<?php
+/**
+ * @file
+ *
+ * code associated to custom backoffice for the customer.
+ */
+
+/* =========================
+     Hooks
+   ========================= */
+
+/**
+ * implements hook_preprocess_page()
+ * @param $vars
+ */
+function webmaster_admin_preprocess_page(&$vars) {
+  // remove breadcrumb on admin pages for webmasters
+  if (path_is_admin(current_path())) {
+    if (user_has_role(4)) {
+      drupal_set_breadcrumb(array());
+    }
+  }
+}
+
+/**
+ * Implements hook_menu()
+ *
+ * @return array
+ */
+function webmaster_admin_menu() {
+
+  $items = array();
+  // add a "mesures" tab on content admin page.
+  $items['admin/content/measurements'] = array(
+    'title' => 'Mesures',
+    'page callback' => 'webmaster_admin_default_menu_callback',
+    'access arguments' => array('access webmaster administration'),
+    'type' => MENU_LOCAL_TASK
+  );
+
+  return $items;
+}
+
+/**
+ * Implements hook_permission()
+ *
+ * @return array
+ */
+function webmaster_admin_permission() {
+  return array(
+    'access webmaster administration' => array(
+      'title' => t('access webmaster administration'),
+      'description' => t('Perform administration tasks for the site.'),
+    ),
+  );
+}
+
+/**
+ * @return string
+ */
+
+function webmaster_admin_default_menu_callback() {
+  return "";
+}

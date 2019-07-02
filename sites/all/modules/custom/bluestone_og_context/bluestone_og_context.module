@@ -1,0 +1,88 @@
+<?php
+
+
+function bluestone_og_context_og_context_negotiation_info() {
+    $providers = array();
+    $providers['bluestone_og_context'] = array(
+        'name' => t('Bluestone'),
+        'description' => t("Contexte determiné en fonction de l'url."),
+        'callback' => 'bluestone_og_context_handler',
+    );
+    return $providers;
+}
+
+
+
+function bluestone_og_context_handler()
+{
+    $context = array();
+
+    $obj = bluestone_menu_group();
+    
+    if(is_object($obj))
+        $context['node'] = array($obj->nid);
+
+    if((!isset($context['node'])) && (isset($_SESSION['og_context']['gid']) && is_numeric($_SESSION['og_context']['gid'])))
+    {
+        $query = db_query("select * from menu_links where plid = 0 and (menu_name = 'menu-og-tabs' or menu_name = 'menu-mission-admin') and hidden = 0");
+        foreach($query as $r)
+        {
+            $router_path = $r->router_path;
+            $expl = explode("/", $router_path);
+            if(in_array("menutoken", $expl))
+            {
+                $opt = unserialize($r->options);
+                $path = $opt["menu_token_link_path"];
+            }
+            else
+                $path = $r->router_path;
+
+            $path = str_replace("%node", $_SESSION['og_context']['gid'], $path);
+            $path = str_replace("%", $_SESSION['og_context']['gid'], $path);
+
+            if($path == request_path())
+                $context['node'] = array($_SESSION['og_context']['gid']);
+        }
+    }
+    return $context;
+}
+
+
+/*
+ * Cette fonction est appelée par og_context
+ * et défini le context de l'application et du groupe
+ */
+function bluestone_menu_group($q = false)
+{
+    if(!$q)
+        $q = $_GET["q"];
+
+    $group = false;
+    $group_content = false;
+
+    $expl = explode("/", $q);
+    foreach($expl as $v) {
+  //      dsm($v);
+        if(is_numeric($v)) {
+            $n = node_load($v);
+            if(is_object($n) && isset($n->type) && $n->type == "mission")
+                $group = $n;
+            elseif(is_object($n) && isset($n->type) && in_array($n->type, array("og_document", "og_discussion", "og_wiki", "og_news")))
+            {
+                $group_content = $n;
+
+                if(isset($group_content->og_group_ref[LANGUAGE_NONE][0]['target_id']) && is_numeric($group_content->og_group_ref[LANGUAGE_NONE][0]['target_id'])) {
+                    $group = node_load($group_content->og_group_ref[LANGUAGE_NONE][0]['target_id']);
+                }
+            }
+        }
+    }
+
+    if($group) {
+        return $group;
+    }
+    return false;
+}
+
+
+

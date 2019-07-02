@@ -1,0 +1,7 @@
+; $Id$
+name = Bluestone mission
+description = Bluestone missions custom code
+core = 7.x
+package = Bluestone
+version = "7.x-1.0-beta1"
+dependencies[] = og

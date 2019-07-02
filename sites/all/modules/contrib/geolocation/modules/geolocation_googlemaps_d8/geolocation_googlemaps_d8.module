@@ -1,0 +1,162 @@
+<?php
+
+/**
+ * @file
+ * D8 Google Maps widget for Geolocation.
+ */
+
+/**
+ * Implements hook_field_widget_info().
+ */
+function geolocation_googlemaps_d8_field_widget_info() {
+  return array(
+    'geolocation_googlemap_d8' => array(
+      'label' => t('Google Map D8'),
+      'field types' => array('geolocation_latlng', 'geofield'),
+    ),
+  );
+}
+
+/**
+ * Implements hook_field_widget_form().
+ */
+function geolocation_googlemaps_d8_field_widget_form(&$form, &$form_state, $field, $instance, $langcode, $items, $delta, $element) {
+
+  // In order to make Geolocation field work with the popular Field collection module
+  // we check if our map widget is part of a Field collection and add the
+  // #field_parents delta.
+  if ($instance['entity_type'] == 'field_collection_item') {
+    $depth = count($element['#field_parents']) - 1;
+    $parent_delta = $element['#field_parents'][$depth];
+    $canvas_id = 'map_canvas_' . $parent_delta . '_' . $element['#field_name'] . '_' . $instance['id'] . '_' . $delta;
+  }
+  else {
+    $canvas_id = 'map_canvas_' . $element['#field_name'] . '_' . $instance['id'] . '_' . $delta;
+  }
+
+  $lat_value = isset($items[$delta]['lat']) ? $items[$delta]['lat'] : NULL;
+  // To make this widget compatible with geofiled we need to rename the keys for
+  // longitude. Geofield uses "lon" while Geolocation Field uses "lng".
+  if ($field['type'] == 'geofield') {
+    $lng_value = isset($items[$delta]['lon']) ? $items[$delta]['lon'] : NULL;
+  }
+  else {
+    $lng_value = isset($items[$delta]['lng']) ? $items[$delta]['lng'] : NULL;
+  }
+  $element += array(
+    '#delta' => $delta,
+  );
+
+  switch ($instance['widget']['type']) {
+
+    case 'geolocation_googlemap_d8':
+      // The map container
+      $element['map_canvas'] = array(
+        '#markup' => '<div id="' . $canvas_id . '" class="geolocation-map-canvas"></div>',
+      );
+      // Hidden lat,lng input fields.
+      $element['lat'] = array(
+        '#type' => 'hidden',
+        '#default_value' => $lat_value,
+        '#attributes' => array('class' => array('geolocation-hidden-lat')),
+      );
+      $element['lng'] = array(
+        '#type' => 'hidden',
+        '#default_value' => $lng_value,
+        '#attributes' => array('class' => array('geolocation-hidden-lng')),
+      );
+
+      // Attach css
+      $element['#attached']['css'][] = drupal_get_path('module', 'geolocation_googlemaps_d8') . '/geolocation_googlemaps_d8.css';
+
+      // Attach js
+      $element['#attached']['js'][] = array(
+        'data' => '//maps.googleapis.com/maps/api/js?libraries=places',
+        'type' => 'external',
+      );
+      $element['#attached']['js'][] = array(
+        'data' => drupal_get_path('module', 'geolocation_googlemaps_d8') . '/geolocation_googlemaps_d8.js',
+        'type' => 'file',
+        'scope' => 'footer',
+      );
+
+      // Make default values available as javascript settings. Example: To access
+      // the default lat value via javascript use: drupalSettings.mapDefaults.lat
+      $lat_default_value = ($lat_value) ? $lat_value : '';
+      $lng_default_value = ($lng_value) ? $lng_value : '';
+      $data = array(
+        'defaults' => array(
+          "$canvas_id" => array(
+            'lat' => $lat_default_value,
+            'lng' => $lng_default_value,
+          ),
+        ),
+      );
+      $element['map']['#attached']['js'][] = array(
+        'data' => array('geolocation' => $data),
+        'type' => 'setting',
+      );
+
+      $element['field_type'] = array('#type' => 'value', '#value' => $field['type']);
+      $element['#element_validate'] = array('geolocation_googlemaps_d8_field_widget_validate');
+      $element['#element_validate'][] = 'geolocation_googlemaps_d8_field_widget_set_value';
+
+      break;
+  }
+  return $element;
+}
+
+/**
+ * Validation handler for geolocation_googlemaps_d8_field_widget_form().
+ */
+function geolocation_googlemaps_d8_field_widget_validate($element, &$form_state, $form) {
+  if ($element['#required']) {
+    if (!$element['lat']['#value'] || !$element['lng']['#value']) {
+      form_error($element, t('!name field is required.', array('!name' => $element['#title'])));
+    }
+  }
+  else {
+    switch (TRUE) {
+      case $element['lng']['#value'] && !$element['lat']['#value']:
+        form_error($element, t('!name field is incomplete, latitude value is missing.', array('!name' => $element['#title'])));
+        break;
+
+      case !$element['lng']['#value'] && $element['lat']['#value']:
+        form_error($element, t('!name field is incomplete, longitude value is missing.', array('!name' => $element['#title'])));
+        break;
+    }
+  }
+}
+
+function geolocation_googlemaps_d8_field_widget_set_value($element, &$form_state, $form) {
+  $values = &drupal_array_get_nested_value($form_state['values'], $element['#parents']);
+  if ($values['field_type'] == 'geofield') {
+    // Geofield needs the values in their own format which is exactly what
+    // geofield_compute_values does, but we have to change first the longitude
+    // key because geofield uses a different one.
+    $values['lon'] = $values['lng'];
+    $values = geofield_compute_values($values);
+  }
+}
+
+/**
+ * Implements hook_field_widget_error().
+ */
+function geolocation_googlemaps_d8_field_widget_error($element, $error, $form, &$form_state) {
+  switch ($error['error']) {
+    case 'geolocation_invalid_lat':
+    case 'geolocation_invalid_lng':
+      form_error($element, $error['message']);
+      break;
+  }
+}
+
+/**
+ * Implements hook_field_widget_form_alter().
+ */
+function geolocation_googlemaps_d8_field_widget_form_alter(&$element, &$form_state, $context) {
+  // Attaches widget JS to each media reference widget.
+  if (isset($element['#type']) && $element['#type'] == 'media') {
+    geolocation_googlemaps_d8_attach_google_js($element);
+  }
+}

@@ -1,0 +1,7 @@
+<?php
+/**
+ * @file
+ * Code for the measurement feature.
+ */
+
+include_once 'measurement.features.inc';

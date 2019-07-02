@@ -1,0 +1,8 @@
+; $Id$
+name = Bluestone user points
+core = 7.x
+dependencies[] = userpoints
+description = "Add userpoints on actions"
+configure = "admin/config/people/userpoints/bluestone-points"
+package = Bluestone
+version = "7.x-1.0-beta1"

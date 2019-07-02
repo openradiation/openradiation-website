@@ -1,0 +1,10 @@
+; $Id$
+name = Bluestone remote API
+core = 7.x
+description = "Sync datas with openradiation remote API via webservices"
+package = Bluestone
+version = "7.x-1.0-beta1"
+dependencies[] = bluestone_mesures
+dependencies[] = bluestone_global
+configure = "admin/config/services/measurements"
+files[] = openradiationApi.class.inc

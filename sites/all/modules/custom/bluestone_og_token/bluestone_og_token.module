@@ -1,0 +1,47 @@
+<?php
+
+/* Custom tokens */
+
+/**
+ * Implements hook_token_info().
+ */
+function bluestone_og_token_token_info() {
+  $info = array();
+
+  // Define a new token.
+  $info['tokens']['node']['og_base_group_id'] = array(
+    'name' => t('Nid du Groupe de référence'),
+    'description' => t('Identifiant de la mission de référence.'),
+  );
+  
+  return $info;
+}
+
+/**
+ * Implements hook_tokens().
+ */
+function bluestone_og_token_tokens($type, $tokens, array $data = array(), array $options = array()) {
+  $replacements = array();
+
+  if ($type == 'node'  && !empty($data['node'])) {
+    // Loop through the available tokens.
+    foreach ($tokens as $name => $original) {
+      // Find our custom tokens by name.
+      switch ($name) {
+        case 'og_base_group_id':
+          if (isset($data['node']->og_group_ref)) {
+            //dsm($data['node']);
+            
+            $first_element = reset($data['node']->og_group_ref['und']);
+            $gid = $first_element['target_id'];
+
+            $replacements[$original] = $gid;
+          }
+          break;
+      }
+    }
+  }
+
+ 
+  return $replacements;
+}

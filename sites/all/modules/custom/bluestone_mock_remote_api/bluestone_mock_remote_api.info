@@ -1,0 +1,6 @@
+; $Id$
+name = Bluestone MOCK remote API
+core = 7.x
+description = "Dev only : Mock openradiation remote API webservices until they are available"
+package = Bluestone
+version = "7.x-1.0-beta1"

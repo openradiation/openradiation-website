@@ -1,0 +1,233 @@
+<?php
+
+define('BLUESTONE_USERS_MAP_PATH', 'users/map');
+
+/**
+ * Implements hook_init()
+ */
+function bluestone_user_init() {
+
+}
+
+function bluestone_user_form_alter(&$form, &$form_state, $form_id){
+  //krumo($form_id);
+  //var_dump($form_id);
+  if ($form_id=="user_login_block") {
+    
+    $form['#attached']['js'] = array(
+        drupal_get_path('module', 'bluestone_user') . '/placeholders.min.js',
+    );
+  }
+
+  if($form_id == 'user_register_form') {
+     $form['#validate'][] = 'bluestone_user_form_validate';
+     return $form;
+  }
+
+}
+
+function bluestone_user_form_validate($form, &$form_state) {
+    // If previous validation didn't pass, return
+    if (form_get_errors()) return;
+
+    $reponse_question_test = strtolower(trim($form_state['values']['field_question_test']['und'][0]['value']));
+    if ( ! (($reponse_question_test == 'paris') || ($reponse_question_test == 'france')))
+       form_set_error('', 'Please check your answers');
+}
+
+/**
+ * @param $items
+ */
+function bluestone_user_menu_alter(&$items) {
+  // Make the privatemsg new link a tab
+
+}
+
+/**
+ * Implements hook_menu()
+ * @return array
+ */
+function bluestone_user_menu() {
+
+  $items = [];
+
+  // create a new measure node, fetching corresponding measure datas on remote API if needed
+  $items[BLUESTONE_USERS_MAP_PATH] = [
+    'title' => 'Users map',
+    'page callback' => 'bluestone_users_map_menu_page_callback',
+    'access arguments' => ['access content'],
+  ];
+
+  // return all our users by ajax
+  $items['api/users'] = [
+    'page callback' => 'bluestone_user_get_users_page_callback',
+    'access arguments' => ['access content'],
+  ];
+
+
+  return $items;
+}
+
+/**
+ * Imoplements hook_user_view_alter()
+ *
+ * Change how profile is displayed.
+ *
+ * @param $build
+ */
+function bluestone_user_user_view_alter(&$build) {
+  $build['userpoints']['#access'] = FALSE;
+  $build['mimemail']['#access'] = FALSE;
+  $build['openradiation_userpoints'] = [
+    '#type' => 'item',
+    '#weight' => 0,
+    //'#markup' => '<strong>' .  t('Contribution points') . ' : </strong><br/>' . userpoints_get_current_points() . ' points',
+    '#markup' => '<span class="userpoints">' . userpoints_get_current_points() . ' points</span>',
+  ];
+
+  if (isset($build['privatemsg_send_new_message'])) {
+    $build['privatemsg_send_new_message']['#weight'] = -10;
+    $build['privatemsg_send_new_message']['#suffix'] = '<div><br/></div>';
+    $build['og_user_node']['#weight'] = 10;
+  }
+}
+
+/**
+ * Menu page callback for "users/map" url
+ */
+function bluestone_users_map_menu_page_callback() {
+  return theme('bluestone_users_map');
+}
+
+/**
+ * Implements hook_theme().
+ * Declare templates to Drupal.
+ */
+function bluestone_user_theme() {
+  return [
+    'bluestone_users_map' => [
+      'variables' => [],
+      'template' => 'templates/bluestone_users_map',
+    ],
+    'bluestone_user_modal' => [
+      'variables' => ['user' => null],
+      'template' => 'templates/bluestone_user_modal',
+    ],
+  ];
+}
+
+/**
+ * Implements template_process_hook
+ * @see bluestoe_users_map theme function and bluestone_users_map.tpl.php
+ * @param $variables
+ */
+function template_process_bluestone_users_map(&$variables) {
+  $key = '';
+  $api_key = variable_get('geolocation_googlemaps_api_key', '');
+  if (!empty($api_key)) {
+    $key = '?key=' . $api_key;
+  }
+  drupal_add_js(
+    'https://maps.googleapis.com/maps/api/js' . $key,
+    'external',
+    [
+      'type' => 'external',
+      'scope' => 'footer'
+    ]
+  );
+  drupal_add_js(drupal_get_path('module', 'bluestone_user') . '/bluestone_user.js');
+}
+
+/**
+ * Webservice api : get all our users
+ *
+ * available api params :
+ * - offset (int)
+ * - limit (int)
+ * @return string json
+ */
+function bluestone_user_get_users_page_callback() {
+  $offset = !empty($_GET['offset']) ? $_GET['offset'] :   0;
+  $limit = !empty($_GET['limit']) ? $_GET['limit'] : null;
+  $users = bluestone_api_get_users($offset, $limit);
+  $json_users = [];
+  $i = 0;
+  foreach ($users as $user) {
+    // dpm($user->field_user_postal_code['und'][0]['value']);11
+    if (!empty($user->field_user_postal_code['und'][0]['safe_value'])) {
+        $json_users[$i] = new stdClass();
+        $json_users[$i]->uuid = $user->uuid;
+        $json_users[$i]->mail = $user->mail;
+        $json_users[$i]->name = $user->name;
+        $json_users[$i]->lastName = !empty($user->field_user_last_name['und'][0]['value']) ? $user->field_user_last_name['und'][0]['value'] : '';
+        $json_users[$i]->firstName = !empty($user->field_user_first_name['und'][0]['value']) ? $user->field_user_first_name['und'][0]['value'] : '';
+        $json_users[$i]->postalCode = $user->field_user_postal_code['und'][0]['safe_value'];
+        //$json_users[$i]->country = !empty($user->field_user_country['und'][0]['iso2']) ? $user->field_user_country['und'][0]['iso2'] : 'FR';
+        $json_users[$i]->country = !empty($user->field_user_country['und'][0]['safe_value']) ? $user->field_user_country['und'][0]['safe_value'] : 'FR';
+        $json_users[$i]->picture = _bluestone_user_get_user_picture($user);
+        $json_users[$i]->link = url('user/' . $user->uid);
+        $i++;
+    }
+    
+  }
+  //drupal_set_message(t("user list: ").drupal_json_encode($json_users),'info');
+  bluestone_send_json_response($json_users);
+}
+
+
+/**
+ * Webservice api : get user picture
+ *
+ * available params :
+ * - user (user)
+ * @return string html
+ */
+function _bluestone_user_get_user_picture($user) 
+{
+    global $base_url;
+    $html = '';
+    if ($user->uid) {
+        if($user->picture){
+            $html = theme_image_style(
+              array(
+                  'style_name' => 'comments',
+                  'path' => $user->picture->uri,
+                  'attributes' => array(
+                      'class' => 'account-user-picture',
+                      'style' => 'display: block; margin: 0 auto;',
+                      ),    
+                  'width' => NULL,
+                  'height' => NULL,
+                  )
+              );
+        } else {
+            $html = '<img class="account-user-picture" typeof="foaf:Image" '
+                //. 'src="'. url(drupal_get_path('theme', 'bootsass') . '/images/user-icon-default.jpg', array('absolute' => TRUE)) .'" alt="">';
+                . 'src="'. $base_url . '/sites/all/themes/bootsass/images/user-icon-default.jpg" width="70" height="70" alt="">';
+        }
+    }
+    return $html;
+}
+
+/**
+ * Get all users as an array, except user 1 and blocked users.
+ * @param int $offset
+ * @param null $limit
+ * @return array
+ */
+function bluestone_api_get_users($offset = 0, $limit = null) {
+
+  $query = db_select('users', 'u');
+  $query->addField('u', 'uid');
+  $query->condition('status', 1);
+  $query->condition('uid', 1, '!=');
+  if ($limit) {
+    $query->range($offset, $limit);
+  }
+  $result = $query->execute();
+  $datas = [];
+  foreach ($result as $row) {
+    $datas[] = user_load($row->uid);
+  }
+  return $datas;
+}

@@ -1,0 +1,175 @@
+<?php
+
+/**
+ * Implements hook_init()
+ */
+function bluestone_global_init() {
+  // using composer autoloader if needed, will be used,
+  // for example, to load guzzle php library
+  if (file_exists('vendor/autoload.php')) {
+    require_once('vendor/autoload.php');
+  }
+}
+
+
+/**
+ * Helpers function to send a COR json response, suitable to
+ * create some services to others servers or for our own
+ * javascript.
+ *
+ * @param array $datas
+ */
+function bluestone_send_json_response($datas = array()) {
+  header("Access-Control-Allow-Origin: *");
+  header("Access-Control-Allow-Credentials: true ");
+  header("Access-Control-Allow-Methods: OPTIONS, GET, POST");
+  header("Access-Control-Allow-Headers: Content-Type, Depth, User-Agent, X-File-Size, X-Requested-With, If-Modified-Since, X-File-Name, Cache-Control");
+  header('Content-Type: application/json');
+  echo drupal_json_encode($datas);
+  drupal_exit();
+}
+
+/**
+ * Make sure we user jquery from jquery_update on user/%/edit pages,
+ * because this page load core jquery by default (1.4.4) for an unknown reason,
+ * and that breaks complety bootstrap js.
+ * @param $js
+ *
+ * Implements hook_js_alter()
+ */
+function bluestone_global_js_alter(&$js) {
+  //$javascript['misc/jquery.js']['data'] = drupal_get_path('module', 'jquery_update') . '/jquery.js';
+
+  if(preg_match('/user\/\d*\/edit/', current_path())
+     || preg_match('*\/node\/add\/og*', current_path())     
+    ){ 
+        
+    $path = "sites/all/modules/contrib/jquery_update/replace/jquery/1.10/jquery.min.js";
+
+    // Copy the current jQuery file settings and change
+    if (isset($js['misc/jquery.js'])) {
+        $js[$path] = $js['misc/jquery.js'];
+        // Update necessary settings
+        $js[$path]['version'] = 1.10;
+        $js[$path]['data'] = $path;
+        // Finally remove the original jQuery
+        unset($js['misc/jquery.js']);
+    }
+    
+  }
+}
+
+
+function bluestone_is_webmaster()
+{
+  global $user;
+
+  return in_array( 'Webmaster', array_values( $user->roles ) );
+}
+
+function bluestone_is_admin()
+{
+  global $user;
+
+  return ( $user->uid == 1 );
+}
+
+function bluestone_is_og_admin( $nid )
+{
+  global $user;
+
+  $roles = og_get_user_roles('node', $nid, $user->uid);
+  return in_array('Animateur', $roles);
+
+}
+
+
+/**
+ * Désactive la mise à jour de certains modules
+ */
+function bluestone_global_update_projects_alter(&$projects){
+    unset($projects['wysiwyg']);
+    unset($projects['userpoints']);
+    unset($projects['simplenews']);
+    //dsm($projects);  // view a list of projects
+}
+
+/**
+ * Permet d'afficher un krumo, pendant les phases de développement
+ */
+function krumodev($content)
+{
+
+  $trace = debug_backtrace();
+  $caller = $trace[1];
+
+  $caller_name = "Called by {$caller['function']}";
+  if (isset($caller['class']))
+    $caller_name .= " in {$caller['class']}";
+  if (isset($caller['line']))
+    $caller_name .= ", line {$caller['line']}";
+
+  $devel_path = realpath(drupal_get_path('module', 'devel'));
+  require_once $devel_path . "/krumo/class.krumo.php";
+  print "<pre>$caller_name</pre>";
+  krumo($content);
+}
+
+
+function time_elapsed2($start, $end) {
+    $start = new DateTime($start);
+    $end = new DateTime($end);
+
+    $interval = $end->diff($start);
+
+    $units = array(
+        "%y" => sp(t("year"), t("years")),
+        "%m" => sp(t("month"), t("months")),
+        "%d" => sp(t("day"), t("days")),
+        "%h" => sp(t("hour"), t("hours")),
+        "%i" => sp(t("minute"), t("minutes")),
+        "%s" => sp(t("second"), t("seconds"))
+    );
+
+    $result = array();
+    foreach ($units as $format_char => $names) {
+        $formatted_value = $interval->format($format_char);
+        if ($formatted_value == "0") {
+            continue;
+        }
+        $result[] = get_formatted_string($formatted_value, $names);
+    }  
+
+    return implode(", ", $result);
+} 
+
+function sp($singular, $plural) {
+    return array("singular" => $singular, "plural" => $plural);
+}
+
+function get_formatted_string($formatted_value, $names) {
+    $result = $formatted_value . " ";
+    if ($formatted_value == "1") {
+        $result .= $names["singular"];
+    } else {
+        $result .= $names["plural"];
+    }
+    return $result;
+}
+
+
+/**
+ * Create a taxonomy term and return the tid.
+ * 
+ * @param type $name the label of the term
+ * @param type $vocabulary the vocabulary
+ * @return type
+ */
+function bluestone_create_taxonomy_term($name, $vocabulary) {
+  $vid = taxonomy_vocabulary_machine_name_load($vocabulary)->vid;
+  $term = new stdClass();
+  $term->name = $name;
+  $term->vid = $vid;
+  taxonomy_term_save($term);
+  return $term->tid;
+}

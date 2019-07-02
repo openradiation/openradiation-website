@@ -1,0 +1,694 @@
+<?php
+/**
+ * This module handle sync of datas between openradiation remote API
+ * and our Drupal site.
+ */
+
+/**
+ * Implements hook_init()
+ */
+function bluestone_remote_api_init() {
+
+  // check if access to remote server has been configured. If not, notify super user.
+  global $user;
+  $url_1 = variable_get('openradiation_server_rest_request_api_url', '');
+  $url_2 = variable_get('openradiation_server_rest_submit_api_url', '');
+  if ((!$url_1 || !$url_2) && $user->uid == 1) {
+    drupal_set_message(t("Dear super admin, you have not yet saved configuration for openradiation webservices, please go to !link to connect to openradiation API",
+        ['!link' => l('settings page', 'admin/config/services/measurements')]
+      ),
+      'error'
+    );
+  }
+
+}
+
+/**
+ * Implements hook_menu()
+ *
+ * @return array
+ */
+function bluestone_remote_api_menu() {
+
+  $items = [];
+
+  // create a new measure node, fetching corresponding measure datas on remote API if needed
+  $items['import-measure/%'] = [
+    'page callback' => 'bluestone_measure_create_page_callback',
+    'page arguments' => [1],
+    'access arguments' => ['access content'],
+    'file' => 'bluestone_remote_api.pages.inc'
+  ];
+
+  // configure this module and remote API server urls
+  $items["admin/config/services/measurements"] = [
+    'type' => MENU_NORMAL_ITEM,
+    'title' => 'Configure openradiation Rest api access',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => ['bluestone_mesures_services_config_form'],
+    'access arguments' => ['administer site configuration'],
+    'file' => 'bluestone_remote_api.pages.inc'
+  ];
+
+
+
+  return $items;
+}
+
+/**
+ * Menu callback access for bluestone api
+ * @return bool
+ */
+function bluestone_api_menu_access_callback() {
+  //$apiKey = variable_get('openradiation_api_key', 'SergentPepper');
+  return TRUE;
+}
+
+/**
+ * Implements hook_remote_api_measurement_qualification_update()
+ * @see bluestone_measurements_qualification_calculate() for qualification array documentation
+ * @param array $qualification
+ */
+function bluestone_remote_api_measurement_qualification_update($qualification) {
+
+  $term = $qualification['term'];
+  $node = $qualification['node'];
+  $votes = $qualification['votes'];
+  $api = openradiationApi::getInstance();
+  $datas = [
+    'qualification'            => $term->field_term_machine_name['und'][0]['safe_value'],
+    'qualificationVotesNumber' => $votes['rating'], // rating contains number of (up votes - down votes)
+  ];
+  $api->post("/measurements/$node->uuid", $datas);
+}
+
+/**
+ * Implements hook_user_insert()
+ *
+ * Sync users datas with remote API
+ */
+function bluestone_remote_api_user_insert(&$edit, $account, $category) {
+  // for whatever reason, launching an http request inside a hook "freeze" drupal,
+  // so we register a function that will be called at the end of the php script ...
+  drupal_register_shutdown_function('_bluestone_remote_api_sync_users' , $edit);
+}
+
+/**
+ * Sync users datas with remote API
+ *
+ * Implements hook_user_update()
+ */
+function bluestone_remote_api_user_update(&$edit, $account, $category) {
+  // for whatever reason, launching an http request inside a hook "freeze" drupal,
+  // so we register a function that will be called at the end of the php script ...
+  drupal_register_shutdown_function('_bluestone_remote_api_sync_users' , $edit);
+}
+
+/**
+ * Implements hook_user_delete()
+ *
+ * Sync users daatas with remote API
+ * @param $account
+ */
+function bluestone_remote_api_user_delete($account) {
+  // for whatever reason, launching an http request inside a hook "freeze" drupal,
+  // so we register a function that will be called at the end of the php script ...
+  // drupal_register_shutdown_function('_bluestone_remote_api_sync_users' , $account);
+}
+
+/**
+ * Implements hook_node_insert()
+ *
+ * If someone create a measure on the drupal site, we want
+ * to post this new measure to the remote API.
+ *
+ * @param $node
+ */
+function bluestone_remote_api_node_insert($node) {
+  // only for "measurement" node types
+  if ($node->type == 'measurement') {
+    //On n'appelle l'API de création que s'il s'agit d'une mesure créée par formulaire
+    //Remarque : on aurait pu aussi utiliser $node->imported_from_remote_api = FALSE ? absent du node visiblement...
+    if (isset($node->form_id) && ('measurement_node_form' == $node->form_id)) {
+        // for whatever reason, launching an http request inside a hook "freeze" drupal,
+        // so we register a function that will be called at the end of the php script.
+        drupal_register_shutdown_function('_bluestone_remote_api_sync_node_insert_measurement' , $node);
+    }
+  }
+
+}
+
+/**
+ * Implements hook_node_update()
+ *
+ * @param $node
+ */
+function bluestone_remote_api_node_update($node) {
+  // only for "measurement" node types
+  if ($node->type == 'measurement') {
+    // for whatever reason, launching an http request inside a hook "freeze" drupal,
+    // so we register a function that will be called at the end of the php script ...
+    drupal_register_shutdown_function('_bluestone_remote_api_sync_node_update_measurement' , $node);
+  }
+}
+
+/**
+ * Create a measurement node on Drupal from measure datas.
+ *
+ * @param $measure_datas array of datas as returned by the webservice for a measure
+ * @param $user : full user object. Will be the author of the created node, if passed.
+ * @return stdClass : node object
+ */
+function bluestone_create_measurement_node_from_webservice_datas($measure_datas, $user = null) {
+
+  $node = new stdClass();
+  $node->type = 'measurement';
+  node_object_prepare($node);
+  $node->language = LANGUAGE_NONE;
+
+  // flag that this node has been created programatically from remote API datas,
+  // This information is needed by our hook_node_insert()
+  $node->imported_from_remote_api = TRUE;
+
+  // Use uuid provided by webservice to create our own uuid.
+  $node->vuuid = $node->uuid = $measure_datas['reportUuid'];
+
+  // commented, node title will be automaticcally generate by bluestone_mesures_node_insert()
+  // @see bluestone_mesures_node_insert()
+  // $node->title = 'Report ' . $measure_datas['reportUuid'];
+
+  if ($user) {
+    $node->uid = $user->uid;
+  }
+  // by default, say administrator is the creator
+  else {
+    $node->uid = 1;
+  }
+
+  // value of the measure in µSv/h
+  $node->field_value['und'][0]['value'] = str_replace(',', '.', $measure_datas['value']);
+
+  $node->field_geolocalisation['und'][0]['lat'] = $measure_datas["latitude"];
+  $node->field_geolocalisation['und'][0]['lng'] = $measure_datas["longitude"];
+
+  // date of the measure
+  $node->field_time['und'][0]['value'] = strtotime($measure_datas["startTime"]);
+
+  // end date of the measure
+  if (!empty($measure_datas['endTime'])) {
+    $node->field_time['und'][0]['value2'] = strtotime($measure_datas["endTime"]);
+  }
+
+  // API send us qualification (for example "seemscorrect")
+  if (!empty($measure_datas['qualification'])) {
+    // so we search for a drupal taxonomy a term with "term_machine_name" (a custom field)
+    // with "seemscorrect" or  " mustbeverified" etc ... value.
+    $qualification_tid = bluestone_get_term_id_by_term_machine_name($measure_datas['qualification']);
+
+    // if we find, register this term tid as the calculated qualification for this node.
+    if ($qualification_tid) {
+      $node->field_calculated_qualification['und'][0]['tid'] = $qualification_tid;
+    }else {
+      watchdog('openradiationApi', "The value of qualification sent by the API is not set in Drupal field: '" . check_plain($measure_datas['qualification']) ."'");
+    }
+  }
+  
+  // Measurement height above the ground (in meters)
+  if (isset($measure_datas['measurementHeight'])) {
+    if (!empty($measure_datas['measurementHeight']) || $measure_datas['measurementHeight'] == 0) {
+      $node->field_measurement_height['und'][0]['value'] = str_replace(',', '.', $measure_datas["measurementHeight"]);
+    }
+  }
+  
+  // Measurement Environment
+  if (!empty($measure_datas['measurementEnvironment'])) {
+    // so we search for a drupal taxonomy a term with "term_machine_name" (a custom field)
+    $measurementEnvironment_tid = bluestone_get_term_id_by_term_machine_name($measure_datas['measurementEnvironment']);
+    if ($measurementEnvironment_tid) {
+      $node->field_measurementenvironment['und'][0]['tid'] = $measurementEnvironment_tid;
+    } else {
+      watchdog('openradiationApi', "The value of measurementEnvironment sent by the API is not set in Drupal field: '" . check_plain($measure_datas['measurementEnvironment']) ."'");
+    }
+  }
+  
+  // altitude
+  if (!empty($measure_datas['altitude'])) {
+    $node->field_altitude['und'][0]['value'] = $measure_datas["altitude"];
+  }
+  // altitude acurracy
+  if (!empty($measure_datas['altitudeAccuracy'])) {
+    $node->field_altitude_accuracy['und'][0]['value'] = str_replace(',', '.', $measure_datas['altitudeAccuracy']);
+  }
+  // température
+  if (!empty($measure_datas['temperature'])) {
+    $node->field_temperature['und'][0]['value'] = $measure_datas["temperature"];
+  }
+  // hits number
+  if (!empty($measure_datas['hitsNumber'])) {
+    $node->field_hits_number['und'][0]['value'] = str_replace(',', '.', $measure_datas['hitsNumber']);
+  }
+  // Position acurracy
+  if (!empty($measure_datas['accuracy'])) {
+    $node->field_accuracy['und'][0]['value'] = str_replace(',', '.', $measure_datas['accuracy']);
+  }
+  
+  // Apparatus
+  if (!empty($measure_datas['apparatusId'])) {
+    $node->field_apparatus_id['und'][0]['value'] = $measure_datas["apparatusId"];
+  }
+  if (!empty($measure_datas['apparatusVersion'])) {
+    $node->field_apparatus_version['und'][0]['value'] = $measure_datas["apparatusVersion"];
+  }
+  if (!empty($measure_datas['apparatusTubeType'])) {
+    $node->field_apparatus_tube_type['und'][0]['value'] = $measure_datas["apparatusTubeType"];
+  }
+  // term apparatus_sensor_type
+  if (!empty($measure_datas['apparatusSensorType'])) {
+    // so we search for a drupal taxonomy a term with "term_machine_name" (a custom field)
+    $apparatusSensorType_tid = bluestone_get_term_id_by_term_machine_name($measure_datas['apparatusSensorType']);
+    if ($apparatusSensorType_tid) {
+      $node->field_apparatus_sensor_type['und'][0]['tid'] = $apparatusSensorType_tid;
+    } else {
+      watchdog('openradiationApi', "The value of apparatusSensorType sent by the API is not set in Drupal field: '" . check_plain($measure_datas['apparatusSensorType']) ."'");
+    }
+  }
+  
+  // Smartphone
+  if (!empty($measure_datas['deviceUuid'])) {
+    $node->field_device_uuid['und'][0]['value'] = $measure_datas["deviceUuid"];
+  }
+  if (!empty($measure_datas['devicePlatform'])) {
+    $node->field_device_platform['und'][0]['value'] = $measure_datas["devicePlatform"];
+  }
+  if (!empty($measure_datas['deviceVersion'])) {
+    $node->field_device_version['und'][0]['value'] = $measure_datas["deviceVersion"];
+  }
+  if (!empty($measure_datas['deviceModel'])) {
+    $node->field_device_model['und'][0]['value'] = $measure_datas["deviceModel"];
+  }
+
+  // Manual reporting
+  if (!empty($measure_datas['manualReporting']) && ("true" == $measure_datas['manualReporting'])) {
+    $node->field_manual_reporting['und'][0]['value'] = "1";
+  } else {
+    $node->field_manual_reporting['und'][0]['value'] = "0";  
+  }
+  
+  // Software version
+  if (!empty($measure_datas['organisationReporting'])) {
+    $node->field_organisation_reporting['und'][0]['value'] = $measure_datas["organisationReporting"];
+  } else {
+    $node->field_organisation_reporting['und'][0]['value'] = " ";
+  }
+  
+  // Atypical measurement
+  if (!empty($measure_datas['atypical']) && ("true" == $measure_datas['atypical'])) {
+    $node->field_atypical_measurement['und'][0]['value'] = "1";
+  } else {
+    $node->field_atypical_measurement['und'][0]['value'] = "0";  
+  }
+  
+  // Creator Name
+  if (!empty($measure_datas['userId'])) {
+    $node->field_creator_name['und'][0]['value'] = $measure_datas["userId"];
+  }
+  
+  // Description
+  if (!empty($measure_datas['description'])) {
+    $node->field_description['und'][0]['value'] = $measure_datas["description"];
+    //krumodev(mb_detect_encoding($measure_datas["description"], mb_detect_order(), true));
+    //krumodev(($measure_datas["description"]));
+    //$node->field_description['und'][0]['value'] = check_plain(iconv(mb_detect_encoding($measure_datas["description"], mb_detect_order(), true), "UTF-8", $measure_datas["description"]));
+  }
+  
+  // Tags
+  if (!empty($measure_datas['tags'])) {
+    //watchdog('openradiationApi', "Tags:" . print_r($measure_datas['tags'], true));
+    foreach ($measure_datas['tags'] as $tag) {
+      $tag_tid = bluestone_get_term_id_by_term_machine_name($tag);
+      //watchdog('openradiationApi', "tag verif: ".$tag. " - tid:".$tag_tid);
+      if (empty($tag_tid)) {
+        //le tag n'existe pas, on doit le créer
+        $tag_tid = bluestone_create_taxonomy_term($tag, 'measure_tags');
+      }
+      $node->field_measure_tags['und'][]['tid'] = $tag_tid;
+    }
+  }
+  
+  // Image
+  if (!empty($measure_datas['enclosedObject'])) {
+    //get image data
+    $image_data = base64_decode(preg_replace('#^data:image/\w+;base64,#i', '', $measure_datas['enclosedObject']));
+    //get mime type
+    $finfo = finfo_open();
+    $mime_type = finfo_buffer($finfo, $image_data, FILEINFO_MIME_TYPE);
+    finfo_close($finfo);
+    // get file extension png. jpg
+    $ext = $mime_type ? str_replace('image/', '', $mime_type) : 'png';
+    $file_name = $node->uuid;
+    // Write the image
+    $file = file_save_data($image_data, 'public://pictures/'.$file_name.'.'.$ext, FILE_EXISTS_REPLACE);
+    //set the file to the node
+    $node->field_measurement_photo['und'][0] = array(
+        'fid' => $file->fid,
+        'filename' => $file_name.'.'.$ext,
+    );
+  }
+
+  node_save($node);
+
+  // if node save is successfull, $node will be populated with a new "nid" property.
+  // This is because "node" is an "object", so it is
+  // passed automatically *by reference* by php to node_save function.
+  return $node;
+
+}
+
+/* ========================================================
+     SYNC FUNCTIONS
+     called by drupal_register_shutdown_function from hooks.
+   ======================================================== */
+
+/**
+ * Post a new measurement to openradiation server.
+ * @param $node
+ */
+function _bluestone_remote_api_sync_node_insert_measurement($node) {
+  //get the data
+  $datas = _bluestone_get_measurement_datas_from_node($node);
+  //watchdog('openradiationApi', "API Call: <pre>" . print_r($datas, true) . "</pre>");
+  //call the API
+  $api = openradiationApi::getInstance();
+  $response = $api->post("/measurements", $datas);
+  // is status code is different than 2** (OK)
+  if (substr($response->getStatusCode(), 0, 1) != '2') {
+    watchdog('openradiationApi',  "Error returned by api server while inserting measurement, server responded: " . check_plain($response->getStatusCode() . ' ' . $response->getReasonPhrase()), array(), WATCHDOG_WARNING);
+    //We delete the node
+    node_delete($node->nid);
+    drupal_set_message(t('An error was returned when trying to send measurement. The measurement couldn\'t be saved.'), 'error');
+    //TO FIX: for some reason, messages can't be updated at this stage!
+    //send the user to the form
+    drupal_goto('measurement/error');
+    return;
+  } else {
+      watchdog('openradiationApi', "Measurement sent successfully to the API. UUID: " . $node->uuid);
+      drupal_set_message(t('Measurement has been sent.'));
+  }
+  
+  //we finish getting back calculated values from the remote API
+  if (!(_bluestone_remote_api_sync_get_calculated_values($node))) {
+    drupal_goto('measurement/error');
+    return;
+  }
+}
+
+
+
+/**
+ * Gets back calculated values from the API after inserting new measurement from a node
+ *
+ * @param $node
+ * @return boolean : TRUE of OK
+ */
+function _bluestone_remote_api_sync_get_calculated_values($node) {
+
+  $uuid = $node->uuid;
+  // get measure datas from remote API
+  $api = openradiationApi::getInstance();
+  $response = $api->get("/measurements/$uuid");
+
+  // is status code is different than 2**
+  if (substr($response->getStatusCode(), 0, 1) != '2') {
+    drupal_add_http_header("Status", $response->getStatusCode());
+    watchdog('openradiationApi',  "Error returned by api server while fetching mesure from uuid, server responded: " . check_plain($response->getStatusCode() . ' ' . $response->getReasonPhrase()), array(), WATCHDOG_WARNING);
+    return FALSE;
+  }
+
+  if (empty($response->json()['data'])) {
+    watchdog('openradiationApi',  "Empty data returned by api server while fetching mesure from uuid, server responded: " . check_plain($response->getStatusCode() . ' ' . $response->getReasonPhrase()), array(), WATCHDOG_WARNING);
+    return FALSE;
+  }
+
+  $measure_datas = $response->json()['data'];
+
+  //get back missing info
+
+  // API send us qualification (for example "seemscorrect")
+  if (!empty($measure_datas['qualification'])) {
+    // so we search for a drupal taxonomy a term with "term_machine_name" (a custom field)
+    // with "seemscorrect" or  " mustbeverified" etc ... value.
+    $qualification_tid = bluestone_get_term_id_by_term_machine_name($measure_datas['qualification']);
+
+    // if we find, register this term tid as the calculated qualification for this node.
+    if ($qualification_tid) {
+      $node->field_calculated_qualification['und'][0]['tid'] = $qualification_tid;
+    }else {
+      watchdog('openradiationApi', "The value of qualification sent by the API is not set in Drupal field: '" . check_plain($measure_datas['qualification']) ."'");
+    }
+  }
+    
+  // Atypical measurement
+  if (!empty($measure_datas['atypical']) && ("true" == $measure_datas['atypical'])) {
+    $node->field_atypical_measurement['und'][0]['value'] = "1";
+  } else {
+    $node->field_atypical_measurement['und'][0]['value'] = "0";  
+  }
+    
+  node_save($node);
+  return TRUE;
+}
+
+
+/**
+ * Petit hack pour enlever les messages
+ */
+function bluestone_remote_api_page_alter(&$page) {
+    if ('/fr/measurement/error' == request_uri() || '/en/measurement/error' == request_uri()) {
+        if (isset($_SESSION['messages']['status'])) {
+            unset($_SESSION['messages']['status']);
+          }
+    }
+}
+
+/**
+ * Prepare an array of datas that we can send to the remote API as json
+ *
+ * @param $node
+ * @return array
+ */
+function _bluestone_get_measurement_datas_from_node($node) {
+
+  // Do not post to remote API if we are creating this node
+  // programatically from the remote API (imported_from_remote_api == TRUE in this case)
+  if (!empty($node->imported_from_remote_api)) {
+    return;
+  }
+
+  // prepare datas we want to send to openradiation API
+  $datas = [];
+
+  if (!empty($node->field_apparatus_id['und'][0]['value'])) {
+    $datas['apparatusId'] = $node->field_apparatus_id['und'][0]['value'];
+  }
+
+  if (!empty($node->field_apparatus_version['und'][0]['value'])) {
+    $datas['apparatusVersion'] = $node->field_apparatus_version['und'][0]['value'];
+  }
+
+  // get machine name from term id
+  if (!empty($node->field_apparatus_sensor_type['und'][0]['tid'])) {
+    $datas['apparatusSensorType'] = bluestone_get_term_machine_name_from_term_id($node->field_apparatus_sensor_type['und'][0]['tid']);
+  }
+
+  if (!empty($node->field_hits_number['und'][0]['value'])) {
+    $datas['hitsNumber'] = (int)$node->field_hits_number['und'][0]['value'];
+  }
+
+  if (!empty($node->field_apparatus_tube_type['und'][0]['value'])) {
+    $datas['apparatusTubeType'] = $node->field_apparatus_tube_type['und'][0]['value'];
+  }
+
+  if (!empty($node->field_temperature['und'][0]['value'])) {
+    $datas['temperature'] = (int)$node->field_temperature['und'][0]['value'];
+  }
+
+  if (!empty($node->field_time['und'][0]['value'])) {
+    $datas['startTime'] = gmdate('Y-m-d\TH:i:s\Z', $node->field_time['und'][0]['value']);
+  }
+
+  if (!empty($node->field_time['und'][0]['value2'])) {
+    if ($node->field_time['und'][0]['value2'] != $node->field_time['und'][0]['value']) {
+      $datas['endTime'] = gmdate('Y-m-d\TH:i:s\Z', $node->field_time['und'][0]['value2']);
+    }
+  }
+
+  if (!empty($node->field_geolocalisation['und'][0]['lat'])) {
+    $datas['latitude'] = (float)$node->field_geolocalisation['und'][0]['lat'];
+  }
+
+  if (!empty($node->field_geolocalisation['und'][0]['lng'])) {
+    $datas['longitude'] = (float)$node->field_geolocalisation['und'][0]['lng'];
+  }
+  if (!empty($node->field_accuracy['und'][0]['value'])) {
+    $datas['accuracy'] = (float)$node->field_accuracy['und'][0]['value'];
+  }
+  if (!empty($node->field_altitude['und'][0]['value'])) {
+    $datas['altitude'] = (int)$node->field_altitude['und'][0]['value'];
+  }
+  if (!empty($node->field_altitude_accuracy['und'][0]['value'])) {
+    $datas['altitudeAccuracy'] = (float)$node->field_altitude_accuracy['und'][0]['value'];
+  }
+  if (!empty($node->field_device_uuid['und'][0]['value'])) {
+    $datas['deviceUuid'] = $node->field_device_uuid['und'][0]['value'];
+  }
+  if (!empty($node->field_device_platform['und'][0]['value'])) {
+    $datas['devicePlatform'] = $node->field_device_platform['und'][0]['value'];
+  }
+  if (!empty($node->field_apparatus_version['und'][0]['value'])) {
+  //  $datas['deviceVersion'] = $node->field_apparatus_version['und'][0]['value'];
+  }
+  if (!empty($node->field_device_model['und'][0]['value'])) {
+    $datas['deviceModel'] = $node->field_device_model['und'][0]['value'];
+  }
+
+  $datas['reportUuid'] = $node->uuid;
+
+  $datas['manualReporting'] = true;
+
+  if (!empty($node->field_organisation_reporting['und'][0]['value'])) {
+    $datas['organisationReporting'] = $node->field_organisation_reporting['und'][0]['value'];
+  }
+
+  if (!empty($node->field_description['und'][0]['value'])) {
+    $datas['description'] = $node->field_description['und'][0]['value'];
+  }
+
+  if (!empty($node->field_value['und'][0]['value'])) {
+    $datas['value'] = (float)$node->field_value['und'][0]['value'];
+  }
+
+  if (!empty($node->field_measurement_height['und'][0]['value'])) {
+    $datas['measurementHeight'] = (int)$node->field_measurement_height['und'][0]['value'];
+  }
+
+  if (!empty($node->field_measure_tags['und'][0]['tid'])) {
+    $tags = [];
+    foreach ($node->field_measure_tags['und'] as $field_datas) {
+      $tag_term = taxonomy_term_load($field_datas['tid']);
+      $tags[] = $tag_term->name;
+    }
+    $datas['tags'] = $tags;
+  }
+
+  if (!empty($node->field_measurementenvironment['und'][0]['tid'])) {
+    $datas['measurementEnvironment'] = bluestone_get_term_machine_name_from_term_id($node->field_measurementenvironment['und'][0]['tid']);
+  }
+
+  if (!empty($node->field_calculated_qualification['und'][0]['value'])) {
+    $datas['qualification'] = bluestone_get_term_machine_name_from_term_id($node->field_calculated_qualification['und'][0]['value']);
+  }
+  if (!empty($node->field_measurement_photo['und'][0]['fid'])) {
+    $fid = $node->field_measurement_photo['und'][0]['fid'];
+    $uri = file_load($fid)->uri;
+    $imgpath = file_create_url($uri);
+    $image = file_get_contents($imgpath);
+    $image_base64 = base64_encode($image);
+    $extension = substr(strrchr($uri, "."), 1);
+    $datatype = "image/" . $extension;
+    $datas['enclosedObject'] = "data:" . $datatype . ";base64," . $image_base64;
+  }
+
+  //$datas['qualificationVotesNumber'] = 0; // node is beeing created, so no votes for this node yet.
+
+  // do not send userId et pwd for now, because it gives us an error from
+  // webservices : {"error":{"code":"102","message":"credentials userId \/ userPwd are not valid"}}
+  $user_node = user_load($node->uid);
+  $datas['userId'] = $user_node->name;
+  // $datas['userPwd'] = $user_node->pass;
+  //le mot de passe doit être renvoyé en clair dans l'API
+  //on oblige l'utilisateur à le ressaisir lors d'une mesure et on le stocke temporairement dans la session
+  $userpwd = '';
+  global $_SESSION;
+  if (!empty($_SESSION['bluestone_mesures']['userpwd'])) {
+    $userpwd = $_SESSION['bluestone_mesures']['userpwd'];
+    //on vide le mdp de la session
+    $_SESSION['bluestone_mesures']['userpwd'] = '';
+  }
+  $datas['userPwd'] = $userpwd;
+  //watchdog('openradiationApi', "API preparation: <pre>" . print_r($datas, true) . "</pre>" . "<br>node:<pre>" . print_r($node, true) . "</pre>");
+  
+  return $datas;
+}
+
+function _bluestone_remote_api_sync_node_update_measurement($node) {
+
+  /*
+  $datas = array();
+  if (!empty($node->field_calculated_qualification['und'][0]['value'])) {
+    $datas['qualification'] = bluestone_get_term_machine_name_from_term_id($node->field_calculated_qualification['und'][0]['value']);
+  }
+  //$datas['qualificationVotesNumber'] = 0; // @TODO
+
+  $api = openradiationApi::getInstance();
+  $api->post("/measurements", $datas);
+  */
+
+}
+
+/**
+ * Sync user to the remote API
+ *
+ * @param $edit
+ */
+function _bluestone_remote_api_sync_users($edit) {
+  $http = openradiationApi::getInstance();
+  $users = bluestone_api_get_users();
+  
+  $json_users = [];
+  foreach ($users as $i => $user) {
+    $json_users[$i]["uuId"] = $user->uuid;
+    $json_users[$i]["userId"] = $user->name;
+    $json_users[$i]["userPwd"] = $user->pass;
+  }
+  
+  //$http->put('/users', $users);
+  $http->put('/users', array_values($json_users));
+}
+
+/**
+ * Return a term id from its term machine name custom field.
+ *
+ * @param string $machine_name : value stored by field_term_machine_name API field.
+ */
+function bluestone_get_term_id_by_term_machine_name($machine_name) {
+  $result = db_query('
+   SELECT *
+   FROM {field_data_field_term_machine_name}
+   WHERE field_term_machine_name_value=:machine_name',
+    array(
+      ':machine_name' => $machine_name
+    )
+  );
+  $datas = $result->fetchAssoc();
+  if ($datas) {
+    return $datas['entity_id'];
+  }
+  return NULL;
+}
+
+function bluestone_get_term_machine_name_from_term_id($tid) {
+  $result = db_query('
+   SELECT *
+   FROM {field_data_field_term_machine_name}
+   WHERE entity_id = :tid
+   AND entity_type = :entity_type',
+    [
+      ':tid' => $tid,
+      ':entity_type' => 'taxonomy_term'
+    ]
+  );
+  $datas = $result->fetchAssoc();
+  if ($datas) {
+    return $datas['field_term_machine_name_value'];
+  }
+}

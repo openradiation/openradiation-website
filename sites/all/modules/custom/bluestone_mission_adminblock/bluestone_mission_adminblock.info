@@ -1,0 +1,5 @@
+name = Bluestone Mission Admin Blocks
+description = Custom blocks for the missions.
+core = 7.x
+version = 7.x-1.0
+package = Bluestone

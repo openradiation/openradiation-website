@@ -1,0 +1,343 @@
+<?php
+/**
+ * @file bluestone_mesures.module
+ *
+ * Handle measurements on openradiation site.
+ */
+
+/* =========================
+     Hooks
+   ========================= */
+
+/**
+ * Implements hook_init()
+ */
+function bluestone_mesures_init() {
+
+}
+
+
+/**
+ * Implements hook_menu()
+ *
+ * @return array
+ */
+function bluestone_mesures_menu() {
+  $items = array();
+  // api/measurements/qualifications/calculate/{content-type}/{content-id}/{widget-id}
+  $items['api/measurements/qualifications/calculate/%/%/%'] = array(
+    'title' => 'Measurement vote',
+    'page callback' => 'bluestone_api_measurement_vote_page_callback',
+    'page arguments' => array(4, 5, 6),
+    'access arguments' => array('access content'),
+    'type' => MENU_CALLBACK,
+  );
+  return $items;
+}
+
+/**
+ * Implements hook_node_insert()
+ *
+ * Generate automaticalluy title for measurement node, "measurement {reportUuid}"
+ * @see also bluestone_mesures_form_alter which is hiding title field
+ * We need to wait for the save to get the uuid content
+ */
+
+function bluestone_mesures_node_insert($node) {
+
+  // only for measurement node types
+  if ($node->type != "measurement") {
+    return;
+  }
+
+  // set automatically node title as "Measurement {uuid}" for all created node.
+  $title = "Measurement $node->uuid";
+
+  db_query("UPDATE node SET title = :title WHERE uuid = :uuid", array(
+      ':title' => $title,
+      ':uuid' => $node->uuid
+    ));
+  db_query("UPDATE node_revision SET title = :title WHERE vuuid = :vuuid", array(
+      ':title' => $title,
+      ':vuuid' => $node->vuuid
+    ));
+}
+
+/**
+ * Implements hook_node_presave()
+ *
+ * Generate automaticalluy title for measurement node, "measurement {reportUuid}"
+ * @see also bluestone_mesures_form_alter which is hiding title field
+ */
+function bluestone_mesures_node_presave($node) {
+  // only for measurement node types
+  if ($node->type != "measurement") {
+    return;
+  }
+  // on insert
+  if (empty($node->nid) && !$node->imported_from_remote_api) {
+    // set default values
+    $node->field_manual_reporting['und'][0]['value'] = "1";
+    global $user;
+    $node->field_creator_name['und'][0]['value'] = $user->name;
+    //krumodev($node);
+  }
+}
+
+/**
+ * Hiding title field, it will be set automatically by bluestone_mesures_node_insert() function
+*/
+
+/**
+ * Menu page callback for "api/measurements/qualifications/calculate/%/%/%"
+ *
+ * Quand on clique sur un pouce, on met à jour la qualification en utilisant ce callback
+ * appelé en js , si le nombre de vote est suffisant.
+ *
+ * @param $content_type
+ * @param $content_id
+ * @param $widget_id
+ */
+function bluestone_api_measurement_vote_page_callback($content_type, $content_id, $widget_id) {
+
+  header('Access-Control-Allow-Origin: *');
+  header('Access-Control-Allow-Methods: GET, POST');
+  header("Access-Control-Allow-Headers: X-Requested-With");
+  header('Content-Type: application/json');
+
+  if ($content_type != 'comment') {
+    drupal_add_http_header('Status', '400');
+    echo drupal_json_encode(array('error' => 'Content type is not a comment'));
+    drupal_exit();
+  }
+
+
+  if (!is_numeric($content_id)) {
+    drupal_add_http_header('Status', '400');
+    echo drupal_json_encode(array('error' => 'Invalid comment id'));
+    drupal_exit();
+  }
+
+  $comment = comment_load($content_id);
+  if (!$comment) {
+    drupal_add_http_header('Status', '404');
+    echo drupal_json_encode(array('error' => 'Comment not found'));
+    drupal_exit();
+  }
+
+  $node = node_load($comment->nid);
+
+  if ($node->type != 'measurement') {
+    drupal_add_http_header('Status', '400');
+    echo drupal_json_encode(array('error' => 'Comment not belongs to a measurement content type.'));
+    drupal_exit();
+  }
+
+  // recalculer la qualification du node en fonction des votes sur les commentaires.
+  $calculated_qualification = bluestone_measurements_qualification_calculate($node->nid);
+
+  if ($calculated_qualification && $calculated_qualification['poids'] > 0) {
+    // retourner d'abord le json avec optimisme, avant le node_save.
+    echo drupal_json_encode(array('data' => $calculated_qualification));
+
+    // update qualification for this node
+    $node->field_calculated_qualification[LANGUAGE_NONE][0]["tid"] = $calculated_qualification['term']->tid;
+
+    node_save($node);
+
+    // let other modules do something if the want to on qualification update
+    module_invoke_all('measurement_qualification_update', $calculated_qualification);
+
+    drupal_exit();
+  }
+  else {
+    echo drupal_json_encode(array('data' => array(),'notification' => array('not enough data to calculate a qualification.')));
+    drupal_exit();
+  }
+}
+
+/**
+ * Calculate a measurement qualification for a given node.
+ * We parse comments vote for this node, to calculate a qualification.
+ * node is NOT saved by this function, its up to you to update
+ * $comment->field_measure_qualification['und'][0]['tid'] with datas returned by
+ * this function when you need.
+ *
+ * @param int $nid : node nid. This must be a measurement node type.
+ * @return array with the following keys :
+ * [
+ *   poids: 2 // calculated weight for this qualification.
+ *   votes: [] // aggregates rating for this qualification (all votes for this qualification on all comments for this qualification)
+ *   votes_by_comment : [] // votes by comments for this qualification
+ *   term : {} // fully loaded qualification term
+ *   node : {} // full corresponding measurement node object
+ * ]
+ *
+ */
+function bluestone_measurements_qualification_calculate($nid) {
+
+  $node = node_load($nid);
+
+  // load all comments from this node
+  $comments = comment_load_multiple(comment_get_thread($node, '', 10000));
+
+  // calculer les poids pour chaque qualification
+  $qualifications = array();
+
+  foreach ($comments as $comment) {
+
+    if (empty($comment->field_measure_qualification['und'][0]['tid'])) continue;
+
+    // get the qualification tid associated to this comment ("seems correct", etc ...)
+    $qualification_tid = $comment->field_measure_qualification['und'][0]['tid'];
+
+    // initialize variable to avoid php warnings.
+    if (empty($qualifications[$qualification_tid])) {
+      $qualifications[$qualification_tid] = array(
+        'poids' => null,
+        'votes_by_comment' => null,
+        'votes' => array('rating' => 0),
+        'term' => null
+      );
+    }
+
+    // get all votes for this comment
+    $votes = rate_get_results('comment', $comment->cid, 1);
+    // Do not take in account a comments with less that two votes...
+    if ($votes['count'] < 1) continue;
+
+    // add this rating to the qualification total rating.
+    $qualifications[$qualification_tid]['poids'] += $votes['rating'];
+
+    // store votes, to check our "poids" is okay regarding votes associated with this comment.
+    $qualifications[$qualification_tid]['votes_by_comment'][$comment->cid] = $votes;
+    $qualifications[$qualification_tid]['votes']['rating'] += $votes['rating'];
+
+    // store full qualification term.
+    $qualifications[$qualification_tid]['term'] = taxonomy_term_load($qualification_tid);
+
+  }
+
+  // get the qualification with the highest "poids", which is the one
+  // we will assign for the node.
+  $poids_max = null;
+  $calculated_qualification = null;
+
+  foreach ($qualifications as $qualification) {
+
+    if (is_null($poids_max)) {
+      $poids_max = $qualification['poids'];
+      $calculated_qualification = $qualification;
+    }
+    else {
+      if ($qualification['poids'] > $poids_max) {
+        $poids_max = $qualification['poids'];
+        $calculated_qualification = $qualification;
+      }
+    }
+
+  }
+
+  if ($calculated_qualification) {
+    // it will be usefull for our hook to get the full node.
+    $calculated_qualification['node'] = $node;
+  }
+
+  return $calculated_qualification;
+
+}
+
+/* =========================
+     Helpers
+   ========================= */
+
+/**
+ * Return node for a given uuid. The uuid is the one of the imported measure from remote api.
+ *
+ * Return FALSE if no corresponding node is found.
+ * @param $measurement_uuid
+ * @return object node or FALSE
+ */
+function bluestone_get_measure_node_by_measure_uuid($measurement_uuid) {
+  $query = db_select('node', 'n');
+  $query->addField('n', 'nid');
+  $query->condition('n.uuid', $measurement_uuid);
+  $query->condition('type', 'measurement');
+  $result = $query->execute()->fetchField();
+  if ($result) {
+    return node_load($result);
+  }
+  return FALSE;
+}
+
+/**
+ * Implements hook_form_alter()
+ *
+ * Hide qualification (taxonomy term of comment entity) on children comments
+ *
+ * @param $form
+ * @param $form_state
+ * @param $form_id
+ */
+function bluestone_mesures_form_alter(&$form, &$form_state, $form_id)
+{
+  // hiding title field.
+  // please @see bluestone_mesures_node_insert()
+  if ($form_id == "measurement_node_form") {
+    $form['title']['#access'] = false;
+    if (!user_has_role(3) && !user_has_role(4)) {
+        //user is not admin nor webmaster
+        //some fields are hidden
+        $form['field_calculated_qualification']['#access'] = false; 
+        $form['field_accuracy']['#access'] = false; 
+        $form['field_device_uuid']['#access'] = false; 
+        $form['field_device_platform']['#access'] = false; 
+        $form['field_device_model']['#access'] = false; 
+        $form['field_device_version']['#access'] = false; 
+        $form['field_altitude_accuracy']['#access'] = false; 
+        $form['field_organisation_reporting']['#access'] = false; 
+        $form['field_manual_reporting']['#access'] = false; 
+        $form['field_atypical_measurement']['#access'] = false; 
+        $form['field_creator_name']['#access'] = false; 
+    }
+    //add user password field, for sending measure to the API
+    $form['user_password'] = array(
+        '#type' => 'password',
+        '#title' => t('Your password'),
+        '#description' => t('Please type your user password. This is needed to save a new measurement.'),
+        //'#size' => 60,
+        //'#maxlength' => 128,
+        '#required' => TRUE,  
+        '#weight' => 0,
+        '#attributes' => array('autocomplete' => 'off'),
+        '#element_validate' => array('current_user_password_validate'),
+    );
+    $form['#attributes']['autocomplete'] = 'off';
+  }
+
+  // hide qualification field for children comments.
+  if($form_id == "comment_node_measurement_form") {
+    if(isset($form['pid']['#value']) && is_numeric($form['pid']['#value'])) {
+      $form["field_measure_qualification"]["#access"] = false;
+    }
+  }
+}
+
+/**
+ * User password validation before submiting measurement
+ * 
+ * @param type $element
+ * @param type $form_state
+ */
+function current_user_password_validate($element, $form_state) {
+    global $user;
+    $pwdtext = $form_state['values']['user_password'];
+    module_load_include('inc', 'content', 'includes/password');
+    if (!user_check_password($pwdtext, $user)) {
+        form_error($element, t('You must enter a valid password.'));
+    }
+    
+    //Put temporarily typed user password into session
+    global $_SESSION;
+    $_SESSION['bluestone_mesures']['userpwd'] = $form_state['values']['user_password'];
+}

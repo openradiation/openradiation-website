@@ -1,0 +1,7 @@
+<?php
+/**
+ * @file
+ * Code for the mission feature.
+ */
+
+include_once 'mission.features.inc';

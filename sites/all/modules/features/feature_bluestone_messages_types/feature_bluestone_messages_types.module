@@ -1,0 +1,7 @@
+<?php
+/**
+ * @file
+ * Code for the Feature bluestone messages types feature.
+ */
+
+include_once 'feature_bluestone_messages_types.features.inc';

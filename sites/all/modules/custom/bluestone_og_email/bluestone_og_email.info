@@ -1,0 +1,8 @@
+; $Id$
+name = Bluestone OG Email
+description = Envoi d'un message mail à l'ensemble des membres d'une mission
+dependencies[] = og
+package = Bluestone
+version = "7.x-1.0"
+core = "7.x"
+

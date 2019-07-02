@@ -1,0 +1,7 @@
+; $Id$
+name = Bluestone OG context
+description = Définit le contexte du groupe actif en fonction de l'url
+core = 7.x
+dependencies[] = og
+package = Bluestone
+version = "7.x-1.0-beta1"

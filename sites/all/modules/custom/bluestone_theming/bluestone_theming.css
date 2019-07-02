@@ -1,0 +1,154 @@
+/** Bootstrap overrides **/
+
+#edit-masquerade-user-field {
+  /*display: inline-block;*/
+  width: 200px;
+}
+
+.form-item-masquerade-user-field .input-group-addon {
+  /*display: inline-block;*/
+  width: 50px;
+  height: 34px;
+}
+
+.form-item-masquerade-user-field .btn {
+  /*display: inline-block;*/
+}
+
+.masquerade.dropdown-menu {
+    margin-bottom: 11px !important;
+    margin-left: -250px !important;
+    box-shadow: 0 0px 12px rgba(0,0,0,.175) !important;
+}
+
+/** END Bootstrap overrides **/
+
+body .container {
+    margin-left: auto;
+    margin-right: auto;
+    padding-left: 0;
+    padding-right: 0;
+}
+
+body .row {
+    margin-left: 0px;
+    margin-right: 0px;
+}
+
+img.partners{
+    width: 100%;
+    height: 60px;
+}
+
+body .nopadding{padding-left:0;padding-right:0;}
+body .nomarigin{margin-left:0;margin-right:0;}
+body .paddingt15{padding-top:15px;}
+body .margint15{margin-top:15px;}
+body .paddingt10{padding-top:15px;}
+body .margint10{margin-top:15px;}
+body .paddingb15{padding-bottom:15px;}
+body .marginb15{margin-bottom:15px;}
+body .paddingb10{padding-bottom:15px;}
+body .marginb10{margin-bottom:15px;}
+
+body.admin-menu{
+    padding-top: 20px;
+}
+
+
+body div.main-container.container div.row section.col-sm-12{
+    padding-left: 0px;
+    padding-right: 0px;
+}
+
+
+.title_comments{margin-bottom: 20px;}
+.comment_table{width: 100%;margin-top: 10px;}
+.comment_table td{vertical-align: top;}
+.comment_table .picture{padding-right: 10px; width: 80px;}
+.comment_table .comment_body{text-align: justify;padding: 10px;}
+.comment_table .comment_quali{vertical-align: middle; text-align: center; color:#ffffff;}
+
+body #block-system-main{
+    padding-bottom: 0px;
+}
+
+.blogShort {
+    border-bottom: 1px solid #ddd;
+}
+
+.margin10 {
+    margin-bottom: 10px;
+    margin-right: 10px;
+}
+
+.site_bottom {
+    margin-bottom: 50px;
+}
+
+body .nav-pills.bluestone_og_tabs > li > a, .nav-pills > li > a, .nav-pills > li > a {
+    background-color: rgb(162,162,162);
+    color: #fff;
+    text-transform: uppercase;
+
+}
+
+body .nav-pills.bluestone_og_tabs > li.active > a,
+body .nav-pills.bluestone_og_tabs  a:hover,
+body .nav-pills.bluestone_og_tabs   a:focus {
+    background-color: rgb(89,35,143) !important;
+    color: #fff;
+
+}
+
+body .nav-pills.bluestone_og_tabs > li{
+    display: inline-block;
+}
+
+body .nav-pills.bluestone_og_tabs {
+    margin: 15px 45px;
+}
+
+body .nav-pills.bluestone_og_tabs > li a{
+    border-radius: 0;
+    text-align: center;
+}
+
+.nav-pills.bluestone_og_tabs > li + li {
+    margin-left: 0px;
+    border-left: solid 1px white;
+}
+
+/*
+body .form-control {
+    width: inherit;
+}
+*/
+
+@media (min-width: 770px) {
+    .front-page-container #openradiation-map-iframe {
+        height:100%;
+    }
+}
+
+@media (max-width: 770px) {
+
+    .front-page-container > section.col-sm-8 > div.region > #block-gazwaldev7-custom-block-custom-home-01 > #openradiation-map-iframe {
+        height: 350px;
+    }
+
+}
+
+#search-block-form {
+    padding-left: 20px;
+    padding-right: 20px;
+    margin-top: 20px;
+}
+
+#finished-missions-btn {
+    margin-top: 20px;
+    background-color: #009fd1;
+    border-color: #008cb7;
+    color: #fff;
+    text-transform: uppercase;
+}

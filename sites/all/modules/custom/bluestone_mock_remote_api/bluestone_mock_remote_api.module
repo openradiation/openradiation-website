@@ -1,0 +1,222 @@
+<?php
+/**
+ * This module mock openradiation webservices, until they are available.
+ */
+
+
+
+/**
+ * Implements hook_menu()
+ *
+ * @return array
+ */
+function bluestone_mock_remote_api_menu() {
+
+  $items = array();
+
+  // mock webservices api, until remote API is available:
+
+  // get one measures by its uuid
+  $items['mock-api/measurements'] = array(
+    'page callback' => 'openradiation_mock_api_measurements_page_callback',
+    'access arguments' => array('access content'),
+    'file' => 'bluestone_mock_remote_api.pages.inc'
+  );
+
+  // get one measures by its uuid
+  $items['mock-api/measurements/%'] = array(
+    'page callback' => 'openradiation_mock_api_get_measurement_page_callback',
+    'page arguments' => array(2),
+    'access arguments' => array('access content'),
+    'file' => 'bluestone_mock_remote_api.pages.inc'
+  );
+
+  // get one measures by its uuid
+  $items['mock-api/users'] = array(
+    'page callback' => 'openradiation_mock_api_users_page_callback',
+    'access arguments' => array('access content'),
+    'file' => 'bluestone_mock_remote_api.pages.inc'
+  );
+
+  return $items;
+}
+
+/* ===============================
+   Openradiation API store mock
+   ============================== */
+
+/**
+ * Class openradiationMockApiMeasureStorage
+ *
+ * Simulate storage for openradiation API.
+ * We store datas in drupal variable table, so we are able to get,
+ * update, delete measurements.
+ */
+class openradiationMockApiMeasureStorage {
+
+  protected $default_datas = array();
+  static $_instance;
+
+  function __construct() {
+    // default values to start.
+    $datas = array();
+    $datas[] = array(
+      // uuid of the measure
+      'reportUuid' => '1',
+      'value' => '0,250',
+      'userId' => 1,
+      'startTime' => time(),
+      'latitude' => "48.856614",
+      'longitude' => "2.3522219000000177",
+      'qualification' => "seemscorrect",
+      'reliability' => 100,
+    );
+    $datas[] = array(
+      // uuid of the measure
+      'reportUuid' => '2',
+      'value' => '0,48',
+      'userId' => 1,
+      'startTime' => time(),
+      'latitude' => "48.856614",
+      'longitude' => "2.3522219000000177",
+      'qualification' => "seemscorrect",
+      'reliability' => 100,
+    );
+    $this->default_datas = $datas;
+  }
+
+  static function getInstance() {
+    return self::$_instance ? self::$_instance : new openradiationMockApiMeasureStorage();
+  }
+
+  /**
+   * get all measurements from database
+   * @return null
+   */
+  function getAll() {
+    $datas = variable_get('openradiationMockApiMeasureStorage', $this->default_datas);
+    return $datas;
+  }
+
+  /**
+   * Get single measurement from database by its reportUuid
+   * @param $reportUuid
+   * @return mixed
+   */
+  function get($reportUuid) {
+    $datas = variable_get('openradiationMockApiMeasureStorage', $this->default_datas);
+    foreach ($datas as $data) {
+      if ($data['reportUuid'] == $reportUuid) {
+        return $data;
+      }
+    }
+    return $datas[$reportUuid];
+  }
+
+  // reset datas
+  function deleteAll() {
+    variable_set('openradiationMockApiMeasureStorage', $this->default_datas);
+  }
+
+  /**
+   * Add a new measurement to the database
+   * @param object $new_datas
+   * @return array|null
+   */
+  function create($new_datas) {
+    $datas = variable_get('openradiationMockApiMeasureStorage', $this->default_datas);
+    $datas[] = (array) $new_datas;
+    variable_set('openradiationMockApiMeasureStorage',$datas);
+    return $datas;
+  }
+
+  function update ($new_datas) {
+    $datas = $this->getAll();
+    foreach ($datas as $i => $data) {
+      if ($data['reportUuid'] == $new_datas->reportUuid) {
+        $datas[$i] = (array) $new_datas;
+        variable_set('openradiationMockApiMeasureStorage' ,$datas);
+        break;
+      }
+    }
+  }
+
+}
+
+/**
+ * Class openradiationMockApiMeasureStorage
+ *
+ * Simulate storage for openradiation API.
+ * We store datas in drupal variable table, so we are able to get,
+ * update, delete measurements.
+ */
+class openradiationMockApiUserStorage {
+
+  protected $default_datas = array();
+  static $_instance;
+
+  function __construct() {
+
+  }
+
+  static function getInstance() {
+    return self::$_instance ? self::$_instance : new openradiationMockApiUserStorage();
+  }
+
+  /**
+   * get all measurements from database
+   * @return null
+   */
+  function getAll() {
+    $datas = variable_get('openradiationMockApiUserStorage', $this->default_datas);
+    return $datas;
+  }
+
+  /**
+   * Get single measurement from database by its reportUuid
+   * @param $uuid (int) : user uuid
+   * @return array()
+   */
+  function get($uuid) {
+    $datas = variable_get('openradiationMockApiMeasureStorage', $this->default_datas);
+    foreach ($datas as $data) {
+      if ($data['uuid'] == $uuid) {
+        return $data;
+      }
+    }
+    return $datas[$uuid];
+  }
+
+  // reset datas
+  function deleteAll() {
+    variable_set('openradiationMockApiUserStorage', $this->default_datas);
+  }
+
+  function saveAll($datas) {
+    variable_set('openradiationMockApiUserStorage', $datas);
+  }
+
+  /**
+   * Add a new measurement to the database
+   * @param object $new_datas
+   * @return array|null
+   */
+  function create($new_datas) {
+    $datas = variable_get('openradiationMockApiUserStorage', $this->default_datas);
+    $datas[] = (array) $new_datas;
+    variable_set('openradiationMockApiUserStorage',$datas);
+    return $datas;
+  }
+
+  function update ($new_datas) {
+    $datas = $this->getAll();
+    foreach ($datas as $i => $data) {
+      if ($data['uuid'] == $new_datas->uuid) {
+        $datas[$i] = (array) $new_datas;
+        variable_set('openradiationMockApiUserStorage' ,$datas);
+        break;
+      }
+    }
+  }
+
+}

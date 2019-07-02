@@ -1,0 +1,367 @@
+<?php
+
+
+//Custom function sending all message.
+//In Order to see what message_type_name you have to create, go to : http://migration2.local.datar.gouv.fr/admin/reports
+//and look for entries by : "Ariane message". here you will see wich message are trying to be instanciated.
+function ariane2_message_stack($entity, $forced_entity_type = false)
+{
+    return;
+    $context = array();
+    $node_ref = false;
+    $groups_ref = array();
+    $comment_ref = false;
+    $user_ref = false;
+    $term_ref = false;
+    $bundle = false;
+    $group_type = false;
+    $uid = false;
+
+    //disable notification if needed
+    if(isset($entity->field_alert) && ( $entity->field_alert[LANGUAGE_NONE][0]["value"] == '1' or $entity->field_alert[LANGUAGE_NONE][0]["value"] == 1))
+        return false;
+
+    //prevent from errors
+    if(!is_object($entity))
+        return false;
+
+    //define context from entity object
+    if(isset($entity->node_type))
+    {
+        $entity_type = 'comment';
+        $comment_ref = $entity;
+        $uid = $entity->uid;
+        if(isset($entity->nid) && is_numeric($entity->nid))
+        {
+            $node_ref = node_load($entity->nid);
+        }
+    }
+    elseif(isset($entity->nid) && isset($entity->vid) && isset($entity->type))
+    {
+        $entity_type = 'node';
+        $node_ref = $entity;
+        $uid = $entity->uid;
+        $context['node'][$entity->nid] = $entity->nid;
+    }
+    elseif(isset($entity->etid))
+    {
+        $entity_type = 'og_membership';
+        if(isset($entity->gid) && is_numeric($entity->gid))
+        {
+            $g = node_load($entity->gid);
+            $groups_ref[] = $g->nid;
+        }
+
+        $user_entity_load = entity_load('user', array($entity->etid));
+        $node_entity_load = entity_load('node', array($entity->etid));
+
+        if (count($user_entity_load)>0)
+        {
+            $user_ref = current($user_entity_load);
+            $uid = $user_ref->uid;
+        }
+        elseif (count($node_entity_load)>0)
+        {
+            $node_ref = current($node_entity_load);
+            $uid = $node_ref->uid;
+            $context['node'][$node_ref->nid] = $node_ref->nid;
+        }
+    }
+    elseif(isset($entity->tid))
+    {
+        $entity_type = 'taxonomy_term';
+        $term_ref = $entity;
+        $context['taxonomy_term'][$node_ref->tid] = $node_ref->tid;
+        $uid = $entity->uid;
+    }
+    elseif(isset($entity->mail))
+    {
+        $entity_type = 'user';
+        $user_ref = $entity;
+        $context['user'][$entity->uid] = $node_ref->uid;
+        $uid = $entity->uid;
+    }
+    else
+    {
+        return false;
+    }
+
+    if($forced_entity_type)
+        $entity_type = $forced_entity_type;
+
+    //Define action from php trace
+    $trace = debug_backtrace();
+    $hook = $trace[1]["function"];
+    $expl = explode("_", $hook);
+    if($forced_entity_type or in_array($entity_type, $expl))
+    {
+        if(in_array("insert", $expl))
+        {
+            $op = "insert";
+        }
+        elseif(in_array("update", $expl))
+        {
+            $op = "update";
+        }
+        elseif(in_array("delete", $expl))
+        {
+            $op = "delete";
+        }
+        else
+        {
+            return false;
+        }
+    }
+    else
+    {
+        return false;
+    }
+
+
+    //Check if og context and find og data
+    if($node_ref)
+    {
+        $entity_infos = entity_extract_ids('node', $node_ref);
+        if(isset($entity_infos[2]) && is_string($entity_infos[2]))
+        {
+            $bundle = $entity_infos[2];
+
+            if(og_is_group_content_type('node', $bundle))
+            {
+                foreach($node_ref as $field_name => $v)
+                {
+                    $field = og_fields_info($field_name);
+                    if($field && is_array($field) && in_array('group content', $field["type"]) && $field["module"] == "og" && $field['field']['type'] == "entityreference")
+                    {
+                        if(isset($v[LANGUAGE_NONE]) && is_array($v[LANGUAGE_NONE]) && count($v[LANGUAGE_NONE]) > 0)
+                        {
+                            foreach($v[LANGUAGE_NONE] as $e)
+                            {
+                                if(isset($e["target_id"]) && is_numeric($e["target_id"]))
+                                {
+                                    $g = node_load($e["target_id"]);
+                                    $groups_ref[] = $g->nid;
+                                    $context['node'][$g->nid] = $g->nid;
+
+                                    $entity_infos = entity_extract_ids('node', $g);
+                                    if(isset($entity_infos[2]) && is_string($entity_infos[2]))
+                                    {
+                                        $group_type = $entity_infos[2];
+
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    //build message name
+    $keywords = array();
+
+    if($op)
+        $keywords[]=$op;
+    if($entity_type)
+        $keywords[]=$entity_type;
+
+
+    //special case for content type subscription
+    if($bundle)
+    {
+        $keywords[]=$bundle;
+
+        $subscribe_content_type_list = entity_load('subscribe_content_type');
+        foreach($subscribe_content_type_list as $subscribe_content_type)
+        {
+            if($bundle == $subscribe_content_type->type)
+            {
+                $context["subscribe_content_type"][$subscribe_content_type->id] = $subscribe_content_type->id;
+            }
+        }
+    }
+
+    if($group_type)
+        $keywords[]=$group_type;
+
+    $message_type_name = implode('_o_', $keywords);
+    $message_type = message_type_load($message_type_name);
+
+    if(!$message_type)
+        watchdog("ariane message", "Try to create message : '$message_type_name' but don't exists. ");
+
+    if($bundle && !$message_type)
+    {
+        unset($keywords);
+
+        $keywords = array();
+
+        if($op)
+            $keywords[]=$op;
+        if($entity_type)
+            $keywords[]=$entity_type;
+        if($group_type)
+            $keywords[]=$group_type;
+
+        $message_type_name = implode('_o_', $keywords);
+        $message_type = message_type_load($message_type_name);
+
+        if(!$message_type)
+            watchdog("Ariane message", "Try to create message : '$message_type_name' but don't exists. ");
+    }
+
+    //process message
+    if($message_type && $uid)
+    {
+        watchdog("Ariane message", "Success creating message : '$message_type_name' ");
+
+        $message = message_create($message_type_name, array('uid' => $uid));
+
+        $wrapper = entity_metadata_wrapper('message', $message);
+
+        if($node_ref)
+            $wrapper->field_node_ref->set($node_ref);
+
+        if($comment_ref)
+            $wrapper->field_comment_ref->set($comment_ref);
+
+        if($term_ref)
+            $wrapper->field_term_ref->set($term_ref);
+
+        if(count($groups_ref) > 0)
+            $wrapper->field_group_ref->set($groups_ref);
+
+        if($user_ref)
+            $wrapper->user_ref->set($user_ref);
+
+        if (module_exists('message_subscribe'))
+        {
+            $subscribe_options = array();
+            $subscribe_options["entity access"] = FALSE;
+            $subscribe_options["notify message owner"] = FALSE;
+            $subscribe_options["use queue"] = FALSE;
+            $subscribe_notify = array();
+            message_subscribe_send_message($entity_type, $entity, $message, $subscribe_notify, $subscribe_options, $context);
+        }
+    }
+}
+
+function ariane2_message_stack_entity_insert($entity, $type) {
+    ariane2_message_stack($entity, $type);
+}
+
+function ariane2_message_stack_entity_update($entity, $type) {
+    ariane2_message_stack($entity, $type);
+}
+
+function ariane2_message_stack_entity_delete($entity, $type) {
+    ariane2_message_stack($entity, $type);
+}
+
+
+function ariane2_message_stack_og_membership_delete($og_membership) {
+    if ($og_membership->entity_type != 'user') {
+        // Membership isn't active.
+        return;
+    }
+
+    if ($og_membership->group_type != 'node') {
+        // For simplicity we operate only on membership with node groups.
+        return;
+    }
+
+    if (!$og_membership->etid) {
+        // Don't capture membership of anonymous user, that might be caused
+        // when using Devel generate.
+        return;
+    }
+    $account = user_load($og_membership->etid);
+    flag('unflag', 'subscribe_og' , $og_membership->gid, $account);
+}
+
+function ariane2_message_stack_og_membership_insert($og_membership) {
+    if ($og_membership->entity_type != 'user') {
+        // Membership isn't active.
+        return;
+    }
+
+    if ($og_membership->group_type != 'node') {
+        // For simplicity we operate only on membership with node groups.
+        return;
+    }
+
+    if (!$og_membership->etid) {
+        // Don't capture membership of anonymous user, that might be caused
+        // when using Devel generate.
+        return;
+    }
+
+    if($og_membership->state == 1)
+    {
+        $account = user_load($og_membership->etid);
+
+        $f = new flag_flag();
+
+        $is_flagged = $f->is_flagged($og_membership->gid, $account->uid);
+
+        if(!$is_flagged)
+            flag('flag', 'subscribe_og' , $og_membership->gid, $account);
+    }
+}
+
+function ariane2_message_stack_og_membership_update($og_membership) {
+    if ($og_membership->entity_type != 'user') {
+        // Membership isn't active.
+        return;
+    }
+
+    if ($og_membership->group_type != 'node') {
+        // For simplicity we operate only on membership with node groups.
+        return;
+    }
+
+    if (!$og_membership->etid) {
+        // Don't capture membership of anonymous user, that might be caused
+        // when using Devel generate.
+        return;
+    }
+
+    if($og_membership->state == 1)
+    {
+        $account = user_load($og_membership->etid);
+
+        $f = new flag_flag();
+
+        $is_flagged = $f->is_flagged($og_membership->gid, $account->uid);
+
+
+        if(!$is_flagged)
+            flag('flag', 'subscribe_og' , $og_membership->gid, $account);
+    }
+}
+
+function ariane2_message_stack_form_alter(&$form, $form_alter, $form_id)
+{
+    if(isset($form['field_alert']))
+    {
+        if(user_access('administer site configuration'))
+            return;
+
+        $og_context = og_context();
+        if(isset($og_context["gid"]) && is_numeric($og_context["gid"]))
+        {
+            global $user;
+            if(og_is_member('node', $og_context["gid"]))
+            {
+                $roles = og_get_user_roles('node', $og_context["gid"]);
+                if(in_array("Animateur", $roles))
+                    return;
+            }
+
+        }
+
+        $form["field_alert"]['#access'] = false;
+
+    }
+}
