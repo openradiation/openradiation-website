@@ -40,23 +40,23 @@ Composer:
 #     refs:
 #       - master
 
-PHP Mess Detector:
-  stage: test
-  image: $DOCKER_REGISTRY/digital-factory/gitlab/php-quality-tools:alpine
-  cache:
-    key: ${CI_COMMIT_REF_SLUG}
-    paths:
-      - src/public/bundles/
-      - src/vendor/
-      - src/bin/
-      - reports/
-  before_script:
-    - mkdir -p reports
-  script:
-    - phpmd . xml codesize --exclude 'vendor' --reportfile 'reports/phpmd-report.xml' --ignore-violations-on-exit
-  except:
-    refs:
-      - master
+#PHP Mess Detector:
+# stage: test
+#  image: $DOCKER_REGISTRY/digital-factory/gitlab/php-quality-tools:alpine
+#  cache:
+#    key: ${CI_COMMIT_REF_SLUG}
+#    paths:
+#      - src/public/bundles/
+#      - src/vendor/
+#      - src/bin/
+#      - reports/
+#  before_script:
+#    - mkdir -p reports
+#  script:
+#    - phpmd . xml codesize --exclude 'vendor' --reportfile 'reports/phpmd-report.xml' --ignore-violations-on-exit
+#  except:
+#    refs:
+#      - master
 
 Sonar:
   extends: .sonar-publish
