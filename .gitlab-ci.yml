@@ -23,7 +23,7 @@ Composer:
   variables:
     COMPOSER_ALLOW_SUPERUSER: "1"
   script:
-    - composer install --working-dir=src/ --optimize-autoloader --no-interaction --no-scripts
+    - composer install  --optimize-autoloader --no-interaction --no-scripts
 
 # Unit:
 #   stage: test
