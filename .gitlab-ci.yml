@@ -1,0 +1,66 @@
+stages:
+  - install
+  - test
+  - analyse
+  - build
+  - publish
+  - deploy
+
+variables:
+  IMAGE_NAME: backend
+
+Sonar:
+  extends: .sonar-publish
+  script:
+    - gitlab-sonar-scanner
+
+Preview:
+  extends: .sonar-preview
+  allow_failure: true
+
+Socle:www:
+  stage: build
+  extends: .docker-publish
+  variables:
+    IMAGE_NAME: www-socle
+    build_context: apache/
+  only:
+    changes:
+      - apache/**/*
+
+Socle:php-fpm:
+  stage: build
+  extends: .docker-publish
+  variables:
+    IMAGE_NAME: backend-socle
+    build_context: php/
+  only:
+    changes:
+      - php/**/*
+
+Public:
+  stage: publish
+  extends: .docker-publish
+  variables:
+    IMAGE_NAME: www
+  script:
+    - echo "FROM $DOCKER_REGISTRY/$IMAGE_NAMESPACE/${IMAGE_NAME}-socle:$CI_COMMIT_REF_SLUG"
+      |
+      docker build --rm 
+      -f -
+      -t $DOCKER_REGISTRY/$IMAGE_NAMESPACE/${IMAGE_NAME}:$CI_COMMIT_REF_SLUG .
+
+Backend:
+  stage: publish
+  extends: .docker-publish
+  script:
+    - echo "FROM $DOCKER_REGISTRY/$IMAGE_NAMESPACE/$IMAGE_NAME-socle:$CI_COMMIT_REF_SLUG"
+      |
+      docker build --rm 
+      -f -
+      -t $DOCKER_REGISTRY/$IMAGE_NAMESPACE/$IMAGE_NAME:$CI_COMMIT_REF_SLUG .
+
+ include:
+   - project: 'irsn/sirse/openradiation/openradiation-deploiement'
+     ref: master
+     file: '.gitlab-cd.yml'
