@@ -7,7 +7,7 @@ stages:
   - deploy
 
 variables:
-  IMAGE_NAME: backend
+  IMAGE_NAME: cms
 
 Sonar:
   extends: .sonar-publish
