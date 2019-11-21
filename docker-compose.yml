@@ -1,0 +1,33 @@
+version: '3'
+
+volumes:
+    datastorage:
+
+services:
+    drupal:
+        image: drupal:7.67
+        ports:
+            - 8080:80
+        depends_on:
+            - postgres
+        volumes:
+            - .\modules:/var/www/html/modules
+            - .\profiles:/var/www/html/profiles
+            - .\themes:/var/www/html/themes
+            - .\sites:/var/www/html/sites
+        restart: always
+    
+    postgres:
+        build:
+            context: .
+            dockerfile: Dockerfile
+        environment:
+            POSTGRES_PASSWORD: root  
+        volumes:
+            - datastorage
+        restart: always
+    
+  
+    
+        
+           
