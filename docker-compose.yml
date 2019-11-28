@@ -1,33 +1,38 @@
 version: '3'
-
-volumes:
-    datastorage:
-
 services:
-    drupal:
-        image: drupal:7.67
-        ports:
-            - 8080:80
-        depends_on:
-            - postgres
-        volumes:
-            - .\modules:/var/www/html/modules
-            - .\profiles:/var/www/html/profiles
-            - .\themes:/var/www/html/themes
-            - .\sites:/var/www/html/sites
-        restart: always
-    
-    postgres:
-        build:
-            context: .
-            dockerfile: Dockerfile
-        environment:
-            POSTGRES_PASSWORD: root  
-        volumes:
-            - datastorage
-        restart: always
-    
-  
-    
-        
-           
+  drupal:
+    image: drupal:7.67
+    #build:
+    #  context: .
+    #  dockerfile: DockerfileDrupal
+    volumes:
+      - .\modules:/var/www/html/modules
+      - .\profiles:/var/www/shtml/profiles
+      - .\themes:/var/www/html/themes
+      - .\sites:/var/www/html/sites
+      - .\includes:/var/www/html/includes
+      - .\vendor:/var/www/html/vendor
+    ports:
+      - "8080:80"
+    depends_on:
+      - postgres
+    networks:
+      - front-tier
+  postgres:
+    build:
+      context: .
+    environment:
+      POSTGRES_PASSWORD: root
+    networks:
+      - front-tier
+  drush:
+    image: drupaldocker/drush:8
+    depends_on:
+      - drupal
+    volumes:
+      - file_drupal_volume:/var/www/html
+volumes:
+  db_drupal_volume:
+  file_drupal_volume:
+networks:
+  front-tier:
