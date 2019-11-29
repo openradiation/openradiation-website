@@ -68,7 +68,7 @@ class openradiationMockApiMeasureStorage {
       'startTime' => time(),
       'latitude' => "48.856614",
       'longitude' => "2.3522219000000177",
-      'qualification' => "seemscorrect",
+      'qualification' => "groundlevel",
       'reliability' => 100,
     );
     $datas[] = array(
@@ -79,7 +79,7 @@ class openradiationMockApiMeasureStorage {
       'startTime' => time(),
       'latitude' => "48.856614",
       'longitude' => "2.3522219000000177",
-      'qualification' => "seemscorrect",
+      'qualification' => "groundlevel",
       'reliability' => 100,
     );
     $this->default_datas = $datas;
