@@ -20,7 +20,7 @@ hide($content['links']);
         <div class="map-inner-wrapper">
           <?php print render($content["field_value"]) ?>
           <div id="map-view-measurement"> </div>
-          
+
           <link rel="stylesheet" href="/sites/all/libraries/leaflet/leaflet.css">
           <script src="/sites/all/libraries/leaflet/leaflet.js"></script>
           <style>
@@ -56,7 +56,7 @@ hide($content['links']);
             </div>
           </div>
         <?php endif; ?>
-          
+
         <div class="row margint15">
           <div class="col-md-6 username nopadding">
             <?php //$u = user_load($node->uid); print check_plain($u->name);?>
@@ -67,13 +67,14 @@ hide($content['links']);
           </div>
           <div class="col-md-12 nopadding">
             <ul class="list-unstyled details">
-              <li><span class="atypical" ><?php if (isset($content['field_atypical_measurement']['#items'][0]['value']) && ("1" == $content['field_atypical_measurement']['#items'][0]['value'])) print t('Atypical measurement') ?></span></li>
+              <li></li>
+              <li><span class="atypical"><?php if (isset($content['field_atypical_measurement']['#items'][0]['value']) && ("1" == $content['field_atypical_measurement']['#items'][0]['value'])) print t('Atypical measurement') ?></span></li>
               <li><span class="blabel"><?php print t('Beginning date') ?> : </span><?php print format_date($content["field_time"]['#items'][0]['value'], $type = 'custom', $format = 'l, j F, Y - H:i:s') ?></li>
               <li><span class="blabel"><?php print t('Measurement duration : ') ?></span><?php
                   $date1 = $content["field_time"]['#items'][0]['value'];
                   $date2 = $content["field_time"]['#items'][0]['value2'];
                   if (empty($content["field_time"]['#items'][0]['value2']) || ($date1 == $date2) ) {
-                    print t('NA');
+                    print t(' - ');
                   } else {
                     $newdate1 = new DateObject($date1);
                     $newdate2 = new DateObject($date2);
@@ -83,8 +84,44 @@ hide($content['links']);
                   ?>
                   </li>
               <li><span class="blabel"><?php print t('Measurement environment') ?> : </span><?php print render($content["field_measurementenvironment"]) ?></li>
-              <li><span class="blabel"><?php print t('Latitude') ?> : </span><?php print check_plain($content['field_geolocalisation']['#items'][0]['lat']) ?></li>
-              <li><span class="blabel"><?php print t('Longitude') ?> : </span><?php print check_plain($content['field_geolocalisation']['#items'][0]['lng']) ?></li>
+              <li>
+                <span class="blabel"><?php
+                  if (empty(check_plain($content['field_geolocalisation_refined']['#items'][0]['lat']))) {
+                     print t('Latitude')?> :</span>
+                      <?php print check_plain($content['field_geolocalisation']['#items'][0]['lat']); }
+                  else {  ?>
+                    <span class="blabel"><?php print t('Latitude Refined') ?> :</span><?php showIfExist(check_plain($content['field_geolocalisation_refined']['#items'][0]['lat']));
+                  }?>
+              </li>
+              <li>
+                <span class="blabel"><?php
+                  if (empty(check_plain($content['field_geolocalisation_refined']['#items'][0]['lng']))) {
+                  print t('Longitude')?> :</span>
+                <?php print check_plain($content['field_geolocalisation']['#items'][0]['lng']); }
+                else {  ?>
+                  <span class="blabel"><?php print t('Longitude Refined') ?> :</span><?php showIfExist(check_plain($content['field_geolocalisation_refined']['#items'][0]['lng']));
+                }?>
+              </li>
+              <li>
+                <span class="blabel"><?php print t('Distance travel during measure') ?> :</span> <?php
+                  $duration = time_getDiffInSecond($content["field_time"]['#items'][0]['value2'],$content["field_time"]['#items'][0]['value']);
+                  $distance = getDistance($content);
+                  if($distance != null){
+                    print $distance?>m (<?php
+                    print getSpeed($distance, $duration);
+                  ?> km/h)
+                  <?php } else {
+                    print ' - ';
+                  } ?>
+              </li>
+
+              <?php
+              if ($content["field_measurementenvironment"][0]['#markup'] == 'Plane' || $content["field_measurementenvironment"][0]['#markup'] == 'Avion') {
+                showItemsPlane($content);
+              } else {
+                showRain($content);
+              } ?>
+
               <li><span class="blabel"><?php print t('Tags') ?> : </span><?php print render($content['field_measure_tags']) ?></li>
               <li><span class="blabel"><?php print t('Description') ?> : </span><span class="description"><?php print render($content['field_description']) ?></span></li>
               <li style="text-align:center; display:block;"><?php print render($content['field_measurement_photo']) ?></li>
@@ -97,24 +134,17 @@ hide($content['links']);
                 <li><span class="blabel"><?php print t('Altitude (m)') ?> : </span><?php print render($content['field_altitude']) ?></li>
                 <li><span class="blabel"><?php print t('Measurement UUID') ?> : </span><?php print $node->uuid; ?></li>
                 <li><span class="blabel"><?php print t('Manual Reporting') ?> : </span><?php if ("1"==$content['field_manual_reporting']['#items'][0]['value']) print t('Yes'); else print t('No'); ?></li>
-                
+
                 <li><span class="blabel"><?php print t('Sensor / ID') ?> : </span><?php print render($content['field_apparatus_id']) ?></li>
                 <li><span class="blabel"><?php print t('Sensor / Version') ?> : </span><?php print render($content['field_apparatus_version']) ?></li>
                 <li><span class="blabel"><?php print t('Sensor / Type') ?> : </span><?php print render($content['field_apparatus_sensor_type']) ?></li>
                 <li><span class="blabel"><?php print t('Sensor / Tube Type') ?> : </span><?php print render($content['field_apparatus_tube_type']) ?></li>
-                
+
                 <li><span class="blabel"><?php print t('Smartphone / UUID') ?> : </span><?php print render($content['field_device_uuid']) ?></li>
                 <li><span class="blabel"><?php print t('Smartphone / Platform') ?> : </span><?php print render($content['field_device_platform']) ?></li>
                 <li><span class="blabel"><?php print t('Smartphone / Model') ?> : </span><?php print render($content['field_device_model']) ?></li>
                 <li><span class="blabel"><?php print t('Smartphone / Version') ?> : </span><?php print render($content['field_device_version']) ?></li>
-                
                 <li><span class="blabel"><?php print t('Software') ?> : </span><?php print render($content['field_organisation_reporting']) ?></li>
-                <!--
-                <li><span class="blabel"><?php print t('Environment') ?> : </span><?php print render($content['field_measurement_environment']) ?></li>
-                <li><span class="blabel"><?php print t('Qualification votes number') ?> : </span><?php print render($content['field_qualification_votes_number']) ?></li>
-                <li><span class="blabel"><?php print t('Reliability') ?> : </span><?php print render($content['field_reliability']) ?></li>
-                -->
-                
               </div>
 
 
@@ -140,3 +170,86 @@ hide($content['links']);
   </div>
 
 </div>
+
+<?php
+  function showIfExist($thingsToShow) {
+    empty($thingsToShow) ? print t(' - ') : print t($thingsToShow);
+  }
+
+  function getDistance($data){
+      $lat1C = (float) check_plain($data['field_geolocalisation_refined']['#items'][0]['lat']) * pi()/180;
+      $lon1C = (float) check_plain($data['field_geolocalisation_refined']['#items'][0]['lon']) * pi()/180;
+      $lat1 = (float) check_plain($data['field_geolocalisation']['#items'][0]['lat']) * pi()/180;
+      $lon1 = (float) check_plain($data['field_geolocalisation']['#items'][0]['lng']) * pi()/180;
+
+      $lat2C = (float) check_plain($data['field_geolocalisation_refined']['#items'][0]['latEnd']) * pi()/180;
+      $lon2C = (float) check_plain($data['field_geolocalisation_refined']['#items'][0]['lngEnd']) * pi()/180;
+      $lat2 = (float) check_plain($data['field_geolocalisation']['#items'][0]['latEnd']) * pi()/180;
+      $lon2 = (float) check_plain($data['field_geolocalisation']['#items'][0]['lngEnd']) * pi()/180;
+
+      $latStart = $lat1C > 0 ? $lat1C : $lat1;
+      $latEnd = $lat2C > 0 ? $lat2C : $lat2;
+      $lonStart = $lat1C > 0 ? $lon1C : $lon1;
+      $lonEnd = $lat2C > 0 ? $lon2C : $lon2;
+
+      $result = acos(sin($latStart)*sin($latEnd) + cos($latStart)*cos($latEnd)*cos($lonStart-$lonEnd));
+
+      if($latEnd < 0) {
+        $alt = (float) check_plain($data['field_altitude']);
+        if ($alt > 0) {
+          $result = $result * (6366*1000 + $alt);
+        } else {
+          $result = $result * (6366*1000);
+        }
+        return round($result, 0);
+      } else {
+        return null;
+      }
+  }
+
+  /**
+   * @param $d distance (meters)
+   * @param $s duration (seconds)
+   *
+   * return speed (km/h)
+   */
+  function getSpeed($d, $s) {
+    return round((($d*3600)/($s*1000)),0);
+  }
+
+    // show if measurement environment is not plane
+  function showRain($content) {
+    echo '<li><span class="blabel">';
+    print t('Weather');
+    echo " : </span><img src='/sites/all/themes/bootsass/assets/images/icon-rain-on.png' width='20' height='20' style='vertical-align: top;' > ";
+    print t($content["field_rain"][0]['#markup']);
+    print '</li>';
+  }
+
+  // show if measurement environment is plane
+  function showItemsPlane($content) {
+    echo '<li><span class="blabel">';
+    print t('Weather');
+    echo " : </span><img src='/sites/all/themes/bootsass/assets/images/icon-plane-storm-on.png' width='20' height='20' style='vertical-align: top;' > ";
+    print render($content['field_storm'][0]['#markup']);
+    print '</li>';
+
+    echo '<li><span class="blabel">';
+    print t('Seat position');
+    echo ": </span><img src='/sites/all/themes/bootsass/assets/images/icon-window-on.png' width='20' height='20' style='vertical-align: top;' > ";
+    print render($content["field_window_seat"][0]['#markup']);
+    print '</li>';
+
+    echo '<li><span class="blabel">';
+    print t('Flight number');
+    echo ' : </span>';
+    print render($content['field_flight_number'][0]['#markup']);
+    print '</li>';
+
+    echo '<li><span class="blabel">';
+    print t('Seat number');
+    echo ' : </span>';
+    print render($content['field_seat_number'][0]['#markup']);
+    print '</li>';
+  }
+?>

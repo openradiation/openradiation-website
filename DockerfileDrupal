@@ -1,0 +1,13 @@
+FROM php:5.6-apache
+
+WORKDIR /var/www/html
+
+ENV DRUPAL_VERSION "7.67"
+ENV DRUPAL_MD5 78b1814e55fdaf40e753fd523d059f8d
+
+RUN curl -fSL "http://ftp.drupal.org/files/projects/drupal-${DRUPAL_VERSION}.tar.gz" -o drupal.tar.gz \
+	&& echo "${DRUPAL_MD5} *drupal.tar.gz" | md5sum -c - \
+	&& tar -xz --strip-components=1 -f drupal.tar.gz \
+	&& rm drupal.tar.gz \
+	&& chown -R www-data:www-data sites
+

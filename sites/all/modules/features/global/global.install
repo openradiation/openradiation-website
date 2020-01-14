@@ -2,7 +2,7 @@
 
 /**
  * Implements hook_update_N().
- * 
+ *
  * Enables webmaster admin module
  */
 function global_update_7000() {
@@ -61,39 +61,31 @@ function global_update_7003() {
 
   $term = new stdClass();
   $vid = $vocabulary->vid;
-  $term->name = 'Must be verified' ;
+  $term->name = 'Ground Level' ;
   $term->vid = $vid;
-  $term->field_term_machine_name['und'][0]['value'] = 'mustbeverified';
+  $term->field_term_machine_name['und'][0]['value'] = 'groundlevel';
   taxonomy_term_save($term);
 
   $term = new stdClass();
   $vid = $vocabulary->vid;
-  $term->name = 'non environnemental Context' ;
+  $term->name = 'Plane' ;
   $term->vid = $vid;
-  $term->field_term_machine_name['und'][0]['value'] = 'noenvironmentalcontext';
+  $term->field_term_machine_name['und'][0]['value'] = 'plane';
   taxonomy_term_save($term);
 
   $term = new stdClass();
   $vid = $vocabulary->vid;
-  $term->name = 'Bad sensor' ;
+  $term->name = 'Wrong Measurement' ;
   $term->vid = $vid;
-  $term->field_term_machine_name['und'][0]['value'] = 'badsensor';
+  $term->field_term_machine_name['und'][0]['value'] = 'wrongmeasurement';
   taxonomy_term_save($term);
 
   $term = new stdClass();
   $vid = $vocabulary->vid;
-  $term->name = 'Bad protocole' ;
+  $term->name = 'Temporary Source' ;
   $term->vid = $vid;
-  $term->field_term_machine_name['und'][0]['value'] = 'badprotocole';
+  $term->field_term_machine_name['und'][0]['value'] = 'temporarysource';
   taxonomy_term_save($term);
-
-  $term = new stdClass();
-  $vid = $vocabulary->vid;
-  $term->name = 'Bad datas transmission';
-  $term->vid = $vid;
-  $term->field_term_machine_name['und'][0]['value'] = 'baddatatransmission';
-  taxonomy_term_save($term);
-
 }
 
 /**

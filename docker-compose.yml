@@ -2,24 +2,31 @@ version: '3'
 services:
     drupal:
         image: drupal:7.67
-        ports:
-            - 8080:80
+        #build:
+        #  context: .
+        #  dockerfile: DockerfileDrupal
         volumes:
             - .\modules:/var/www/html/modules
             - .\profiles:/var/www/html/profiles
             - .\themes:/var/www/html/themes
             - .\sites:/var/www/html/sites
-        restart: always
-    
+            - .\includes:/var/www/html/includes
+            - .\vendor:/var/www/html/vendor
+        ports:
+            - "8080:80"
+        depends_on:
+          - postgres
+        networks:
+          - front-tier
     postgres:
         build:
             context: .
-            dockerfile: Dockerfile
         environment:
-            POSTGRES_PASSWORD: root             
-        restart: always
-    
-  
-    
-        
-           
+            POSTGRES_PASSWORD: root
+        networks:
+          - front-tier
+volumes:
+  db_drupal_volume:
+  file_drupal_volume:
+networks:
+  front-tier:

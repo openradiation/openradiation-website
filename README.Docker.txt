@@ -10,4 +10,4 @@ step 5 : psql -U postgres
 step 6 : Create role openradiation;
 step 7 :\q
 step 8 : cd ..
-step 9 :pg_restore -Fc  -i -U postgres  -d  postgres -c  /tmp/openradiation_website_2019_11_18.dmp
+step 9 :pg_restore -Fc  -i -U postgres  -d  postgres -c  /tmp/openradiation_website_2019_12_20.dmp
