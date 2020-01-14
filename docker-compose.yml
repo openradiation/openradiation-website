@@ -7,7 +7,7 @@ services:
     #  dockerfile: DockerfileDrupal
     volumes:
       - .\modules:/var/www/html/modules
-      - .\profiles:/var/www/shtml/profiles
+      - .\profiles:/var/www/html/profiles
       - .\themes:/var/www/html/themes
       - .\sites:/var/www/html/sites
       - .\includes:/var/www/html/includes
