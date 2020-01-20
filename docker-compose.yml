@@ -25,6 +25,12 @@ services:
             POSTGRES_PASSWORD: root
         networks:
           - front-tier
+    drush:
+      image: drupaldocker/drush:8
+      depends_on:
+        - drupal
+      volumes:
+        - file_drupal_volume:/var/www/html
 volumes:
   db_drupal_volume:
   file_drupal_volume:
