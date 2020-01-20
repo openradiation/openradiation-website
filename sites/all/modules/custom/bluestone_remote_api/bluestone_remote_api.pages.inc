@@ -27,7 +27,7 @@ function bluestone_measure_create_page_callback($uuid) {
   // we have not yet created a node for this measurement, let's do it.
   // get measure datas from remote API
   $api = openradiationApi::getInstance();
-  $response = $api->get("/measurements/$uuid"); 
+  $response = $api->get("/measurements/$uuid");
   /* BLOC TEST - for testing purposes only */
   /*
   $test = '{"data":{"apparatusId":"EA:74:F2:F9:A1:6F","apparatusVersion":"OG-KIT11.0000010","apparatusSensorType":"geiger","apparatusTubeType":"SBM-20","temperature":28,"value":0.086,"hitsNumber":34,"startTime":"2016-12-06T10:54:33.000Z","endTime":"2016-12-06T10:55:56.000Z","latitude":48.7939462,"longitude":2.2763155,"deviceUuid":"dde828465a82183f","devicePlatform":"Android","deviceVersion":"5.0.2","deviceModel":"RIDGE 4G","reportUuid":"e51640cc-c805-4c44-b920-45c15b8e5510","manualReporting":false,"description":"mesure de test","measurementHeight":0,"userId":"ghis2","measurementEnvironment":"city","dateAndTimeOfCreation":"2016-12-06T10:57:38.578Z","qualification":"mustbeverified","qualificationVotesNumber":0,"reliability":94,"atypical":false,"tags":["ghis","hello","world"]}}';

@@ -342,7 +342,7 @@ h2.block-title {
 }
 
 .submitted .user-picture img,
-.node-og-wiki .user-picture img, {
+.node-og-wiki .user-picture img {
 	width: 20px;
 	height: 20px;
 	border-radius: 3px;
@@ -544,7 +544,7 @@ h2.block-title {
 
     h3 {
       color: black;
-      font-size: 24px;  
+      font-size: 24px;
     }
 
 
@@ -1004,15 +1004,15 @@ body.node-type-measurement  {
         text-align: center;
       }
     }
-    
+
     li div {
         display: inline-block;
     }
-    
+
     .description {
         font-style: italic;
     }
-    
+
 
   }
 
@@ -1368,7 +1368,7 @@ h2 .badge {
 
 .picture-col {
     text-align:center;
-    
+
     img {
         display: inline-block;
     }
@@ -1398,7 +1398,7 @@ h2 .badge {
     margin: 0 130px;
     padding: 5px;
     background-color: #eee;
-    
+
     a {
         padding: 2px;
     }
@@ -1406,7 +1406,7 @@ h2 .badge {
         color: #000;
         /* font-weight: bold; */
     }
-    
+
     li {
         margin: 0 0 0 10px;
     }
@@ -1425,9 +1425,9 @@ h2 .badge {
   margin: 0;
   background-color: transparent;
 }
- 
+
 .cookie-compliance__inner {
-  background-color: #502b76; 
+  background-color: #502b76;
   width: 1170px;
   margin: auto;
   /* 1170  970  750 */
@@ -1457,13 +1457,13 @@ h2 .badge {
     width: 1170px;
   }
 }
- 
+
 .cookie-compliance__text {
-  color: #fff;  
+  color: #fff;
 }
- 
+
 .cookie-compliance__button {
-  background-color: #fff;  
+  background-color: #fff;
   border-color: #3e215a;
-  color: #502b76;  
+  color: #502b76;
 }
