@@ -184,7 +184,7 @@ function imce_fileop_form($form, &$form_state, $ref) {
       '#title' => t('Resize'),
     ) + imce_resize_form($imce);
   }
- 
+
   $form['#action'] = $imce['url'];
   return $form;
 }

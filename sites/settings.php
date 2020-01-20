@@ -213,19 +213,19 @@
  * @endcode
  */
 $databases = array (
-  'default' => 
-  array (
-    'default' => 
+  'default' =>
     array (
-      'database' => 'postgres',
-      'username' => 'postgres',
-      'password' => 'root',
-      'host' => 'postgres',
-      'port' => '5432',
-      'driver' => 'pgsql',
-      'prefix' => '',
+      'default' =>
+        array (
+          'database' => 'postgres',
+          'username' => 'postgres',
+          'password' => 'root',
+          'host' => 'postgres',
+          'port' => '5432',
+          'driver' => 'pgsql',
+          'prefix' => '',
+        ),
     ),
-  ),
 );
 
 /**

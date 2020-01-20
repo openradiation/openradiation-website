@@ -1994,6 +1994,7 @@ function taxonomy_node_update($node) {
   // Always rebuild the node's taxonomy index entries on node save.
   taxonomy_delete_node_index($node);
   taxonomy_build_node_index($node);
+  //cache_clear_all(( url('node/'. $node->nid, array('absolute' => TRUE))), 'cache_page');
 }
 
 /**

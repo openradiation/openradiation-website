@@ -288,17 +288,17 @@ function bluestone_mesures_form_alter(&$form, &$form_state, $form_id)
     if (!user_has_role(3) && !user_has_role(4)) {
         //user is not admin nor webmaster
         //some fields are hidden
-        $form['field_calculated_qualification']['#access'] = false; 
-        $form['field_accuracy']['#access'] = false; 
-        $form['field_device_uuid']['#access'] = false; 
-        $form['field_device_platform']['#access'] = false; 
-        $form['field_device_model']['#access'] = false; 
-        $form['field_device_version']['#access'] = false; 
-        $form['field_altitude_accuracy']['#access'] = false; 
-        $form['field_organisation_reporting']['#access'] = false; 
-        $form['field_manual_reporting']['#access'] = false; 
-        $form['field_atypical_measurement']['#access'] = false; 
-        $form['field_creator_name']['#access'] = false; 
+        $form['field_calculated_qualification']['#access'] = false;
+        $form['field_accuracy']['#access'] = false;
+        $form['field_device_uuid']['#access'] = false;
+        $form['field_device_platform']['#access'] = false;
+        $form['field_device_model']['#access'] = false;
+        $form['field_device_version']['#access'] = false;
+        $form['field_altitude_accuracy']['#access'] = false;
+        $form['field_organisation_reporting']['#access'] = false;
+        $form['field_manual_reporting']['#access'] = false;
+        $form['field_atypical_measurement']['#access'] = false;
+        $form['field_creator_name']['#access'] = false;
     }
     //add user password field, for sending measure to the API
     $form['user_password'] = array(
@@ -307,7 +307,7 @@ function bluestone_mesures_form_alter(&$form, &$form_state, $form_id)
         '#description' => t('Please type your user password. This is needed to save a new measurement.'),
         //'#size' => 60,
         //'#maxlength' => 128,
-        '#required' => TRUE,  
+        '#required' => TRUE,
         '#weight' => 0,
         '#attributes' => array('autocomplete' => 'off'),
         '#element_validate' => array('current_user_password_validate'),
@@ -325,7 +325,7 @@ function bluestone_mesures_form_alter(&$form, &$form_state, $form_id)
 
 /**
  * User password validation before submiting measurement
- * 
+ *
  * @param type $element
  * @param type $form_state
  */
@@ -336,7 +336,7 @@ function current_user_password_validate($element, $form_state) {
     if (!user_check_password($pwdtext, $user)) {
         form_error($element, t('You must enter a valid password.'));
     }
-    
+
     //Put temporarily typed user password into session
     global $_SESSION;
     $_SESSION['bluestone_mesures']['userpwd'] = $form_state['values']['user_password'];

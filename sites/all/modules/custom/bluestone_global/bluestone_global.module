@@ -41,9 +41,9 @@ function bluestone_global_js_alter(&$js) {
   //$javascript['misc/jquery.js']['data'] = drupal_get_path('module', 'jquery_update') . '/jquery.js';
 
   if(preg_match('/user\/\d*\/edit/', current_path())
-     || preg_match('*\/node\/add\/og*', current_path())     
-    ){ 
-        
+     || preg_match('*\/node\/add\/og*', current_path())
+    ){
+
     $path = "sites/all/modules/contrib/jquery_update/replace/jquery/1.10/jquery.min.js";
 
     // Copy the current jQuery file settings and change
@@ -55,7 +55,7 @@ function bluestone_global_js_alter(&$js) {
         // Finally remove the original jQuery
         unset($js['misc/jquery.js']);
     }
-    
+
   }
 }
 
@@ -115,6 +115,18 @@ function krumodev($content)
   krumo($content);
 }
 
+function time_getDiffInSecond($start, $end) {
+  $newDateStart = new DateObject($start);
+  $newDateEnd = new DateObject($end);
+
+  $interval = (new DateTime($newDateEnd))->diff(new DateTime($newDateStart));
+
+  $reference = new DateTimeImmutable;
+  $endTime = $reference->add($interval);
+
+  return $endTime->getTimestamp() - $reference->getTimestamp();
+
+}
 
 function time_elapsed2($start, $end) {
     $start = new DateTime($start);
@@ -138,10 +150,10 @@ function time_elapsed2($start, $end) {
             continue;
         }
         $result[] = get_formatted_string($formatted_value, $names);
-    }  
+    }
 
     return implode(", ", $result);
-} 
+}
 
 function sp($singular, $plural) {
     return array("singular" => $singular, "plural" => $plural);
@@ -160,7 +172,7 @@ function get_formatted_string($formatted_value, $names) {
 
 /**
  * Create a taxonomy term and return the tid.
- * 
+ *
  * @param type $name the label of the term
  * @param type $vocabulary the vocabulary
  * @return type
