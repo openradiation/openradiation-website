@@ -19,6 +19,9 @@ function gazwaldev7_custom_block_block_info() {
   $blocks['openradiation_map'] = array(
     'info' => t('Openradiation map'),
   );
+  $blocks['openradiation_map_plane'] = array(
+    'info' => t('Plane map'),
+  );
   return $blocks;
 }
 
@@ -57,10 +60,21 @@ function gazwaldev7_custom_block_block_view($delta = '') {
       style="overflow:hidden"
       height="700px"
       width="100%"
-      src="'.$url.'/openradiation">
+      src="'.$url.'/openradiation/5/46/7/all/all/groundlevel/all/0/100/0/100">
       </iframe>';
+      break;
+    case "openradiation_map_plane" :
+      $block['subject'] = '';
+      $block['content'] = '<iframe
+      id="openradiation-map-iframe"
+      frameborder="0"
+      style="overflow:hidden"
+      height="700px"
+      width="100%"
+      src="'.$url.'/openradiation/4/46/2/all/all/plane/all/0/100/0/100">
+      </iframe>';
+      break;
   }
-
   return $block;
 }
 
