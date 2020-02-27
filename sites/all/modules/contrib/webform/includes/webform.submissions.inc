@@ -95,6 +95,7 @@ function webform_submission_create($node, $account, array $form_state, $is_previ
  *   The existing submission SID.
  */
 function webform_submission_update($node, $submission) {
+  $transaction = db_transaction();
   // Allow other modules to modify the submission before saving.
   foreach (module_implements('webform_submission_presave') as $module) {
     $function = $module . '_webform_submission_presave';
@@ -145,6 +146,7 @@ function webform_submission_update($node, $submission) {
  *   The new submission SID.
  */
 function webform_submission_insert($node, $submission) {
+  $transaction = db_transaction();
   // The submission ID may already be set if being called as an update.
   if (!isset($submission->sid) && (!isset($submission->is_new) || $submission->is_new == FALSE)) {
     // Allow other modules to modify the submission before saving.
@@ -191,6 +193,7 @@ function webform_submission_insert($node, $submission) {
  *   The webform submission object to be deleted from the database.
  */
 function webform_submission_delete($node, $submission) {
+  $transaction = db_transaction();
   // Iterate through all components and let each do cleanup if necessary.
   foreach ($node->webform['components'] as $cid => $component) {
     if (isset($submission->data[$cid])) {
@@ -228,17 +231,22 @@ function webform_submission_delete($node, $submission) {
  * @param $emails
  *   (optional) An array of specific e-mail settings to be used. If omitted, all
  *   e-mails in $node->webform['emails'] will be sent.
+ * @param bool $send_disabled
+ *   (optional) When TRUE, send all emails, even those that are disabled.
  *
  * @return int
  *   Number of mail sent.
  */
-function webform_submission_send_mail($node, $submission, $emails = NULL) {
+function webform_submission_send_mail($node, $submission, $emails = NULL, $send_disabled = FALSE) {
   // Get the list of e-mails we'll be sending.
   $emails = isset($emails) ? $emails : $node->webform['emails'];
 
   // Create a themed message for mailing.
   $send_count = 0;
   foreach ($emails as $eid => $email) {
+    if (!$send_disabled && !$email['status']) {
+      continue;
+    }
     $mail = _webform_submission_prepare_mail($node, $submission, $email);
     if (!$mail) {
       continue;
@@ -276,11 +284,6 @@ function webform_submission_send_mail($node, $submission, $emails = NULL) {
  */
 function _webform_submission_prepare_mail($node, $submission, &$email) {
   global $user;
-
-  // Don't process disabled emails.
-  if (!$email['status']) {
-    return;
-  }
 
   // Set the HTML property based on availablity of MIME Mail.
   $email['html'] = ($email['html'] && webform_variable_get('webform_email_html_capable'));
@@ -328,6 +331,7 @@ function _webform_submission_prepare_mail($node, $submission, &$email) {
                         '!name' => strlen($email_parts['name']) ? $email_parts['name'] : $email_parts['address'],
                         '!site_name' => $default_from_name,
                       ));
+      $from_name = str_replace('"', "'", $from_name);
       $from_name = implode(' ', array_map('mime_header_encode', explode(' ', $from_name)));
       $email['from'] = '"' . $from_name . '" <' . $email['from'] . '>';
     }
@@ -507,10 +511,10 @@ function webform_submission_page($node, $submission, $format) {
 
   // Determine the mode in which we're displaying this submission.
   $mode = ($format != 'form') ? 'display' : 'form';
-  if (strpos(request_uri(), 'print/') !== FALSE) {
+  if (strpos(request_path(), 'print/') !== FALSE) {
     $mode = 'print';
   }
-  if (strpos(request_uri(), 'printpdf/') !== FALSE) {
+  if (strpos(request_path(), 'printpdf/') !== FALSE) {
     $mode = 'pdf';
   }
 
@@ -614,7 +618,7 @@ function webform_submission_resend_submit($form, &$form_state) {
       $emails[] = $form['#node']->webform['emails'][$eid];
     }
   }
-  $sent_count = webform_submission_send_mail($node, $submission, $emails);
+  $sent_count = webform_submission_send_mail($node, $submission, $emails, TRUE);
   if ($sent_count) {
     drupal_set_message(format_plural($sent_count,
       'Successfully re-sent submission #@sid to 1 recipient.',
@@ -663,7 +667,24 @@ function theme_webform_submission_resend(array $variables) {
 }
 
 /**
- * Print a Webform submission for display on a page or in an e-mail.
+ * Prepare a Webform submission for display on a page or in an e-mail.
+ *
+ * @param object $node
+ *   The node object.
+ * @param object $submission
+ *   The submission object.
+ * @param array $email
+ *   The email configuration array.
+ * @param string $format
+ *   The format the form should be displayed as. May be one of the following:
+ *   - form: Show as an editable form.
+ *   - html: Show as HTML results.
+ *   - text: Show as plain text.
+ * @param array $excluded_components
+ *   An array of components to exclude as cid.
+ *
+ * @return array
+ *   A renderable array of the submission.
  */
 function webform_submission_render($node, $submission, $email, $format, $excluded_components = NULL) {
   $component_tree = array();
@@ -948,7 +969,7 @@ function webform_get_submission_count($nid, $uid = NULL, $is_draft = 0) {
     if ($uid === 0) {
       $submissions = isset($_SESSION['webform_submission']) ? $_SESSION['webform_submission'] : NULL;
       if ($submissions) {
-        $query->condition('ws.sid', $submissions, 'IN');
+        $query->condition('ws.sid', array_keys($submissions), 'IN');
       }
       else {
         // Intentionally never match anything if the anonymous user has no
