@@ -86,20 +86,20 @@ hide($content['links']);
               <li><span class="blabel"><?php print t('Measurement environment') ?> : </span><?php print render($content["field_measurementenvironment"]) ?></li>
               <li>
                 <span class="blabel"><?php
-                  if (empty(check_plain($content['field_geolocalisation_refined']['#items'][0]['lat']))) {
-                     print t('Latitude')?> :</span>
-                      <?php print check_plain($content['field_geolocalisation']['#items'][0]['lat']); }
-                  else {  ?>
-                    <span class="blabel"><?php print t('Latitude Refined') ?> :</span><?php showIfExist(check_plain($content['field_geolocalisation_refined']['#items'][0]['lat']));
-                  }?>
+                  if (empty(check_plain($content['field_geolocalisation']['#items'][0]['refinedLat']))) {
+                  print t('Latitude')?> :</span>
+                <?php print check_plain($content['field_geolocalisation']['#items'][0]['lat']); }
+                else {  ?>
+                  <span class="blabel"><?php print t('Latitude Refined') ?> :</span><?php showIfExist(check_plain($content['field_geolocalisation']['#items'][0]['refinedLat']));
+                }?>
               </li>
               <li>
                 <span class="blabel"><?php
-                  if (empty(check_plain($content['field_geolocalisation_refined']['#items'][0]['lng']))) {
+                  if (empty(check_plain($content['field_geolocalisation']['#items'][0]['refinedLng']))) {
                   print t('Longitude')?> :</span>
                 <?php print check_plain($content['field_geolocalisation']['#items'][0]['lng']); }
                 else {  ?>
-                  <span class="blabel"><?php print t('Longitude Refined') ?> :</span><?php showIfExist(check_plain($content['field_geolocalisation_refined']['#items'][0]['lng']));
+                  <span class="blabel"><?php print t('Longitude Refined') ?> :</span><?php showIfExist(check_plain($content['field_geolocalisation']['#items'][0]['refinedLng']));
                 }?>
               </li>
               <li>
@@ -176,16 +176,16 @@ hide($content['links']);
     empty($thingsToShow) ? print t(' - ') : print t($thingsToShow);
   }
 
-  function getDistance($data){
-      $lat1C = (float) check_plain($data['field_geolocalisation_refined']['#items'][0]['lat']) * pi()/180;
-      $lon1C = (float) check_plain($data['field_geolocalisation_refined']['#items'][0]['lon']) * pi()/180;
-      $lat1 = (float) check_plain($data['field_geolocalisation']['#items'][0]['lat']) * pi()/180;
-      $lon1 = (float) check_plain($data['field_geolocalisation']['#items'][0]['lng']) * pi()/180;
+function getDistance($data){
+  $lat1C = (float) check_plain($data['field_geolocalisation']['#items'][0]['refinedLat']) * pi()/180;
+  $lon1C = (float) check_plain($data['field_geolocalisation']['#items'][0]['refinedLng']) * pi()/180;
+  $lat1 = (float) check_plain($data['field_geolocalisation']['#items'][0]['lat']) * pi()/180;
+  $lon1 = (float) check_plain($data['field_geolocalisation']['#items'][0]['lng']) * pi()/180;
 
-      $lat2C = (float) check_plain($data['field_geolocalisation_refined']['#items'][0]['latEnd']) * pi()/180;
-      $lon2C = (float) check_plain($data['field_geolocalisation_refined']['#items'][0]['lngEnd']) * pi()/180;
-      $lat2 = (float) check_plain($data['field_geolocalisation']['#items'][0]['latEnd']) * pi()/180;
-      $lon2 = (float) check_plain($data['field_geolocalisation']['#items'][0]['lngEnd']) * pi()/180;
+  $lat2C = (float) check_plain($data['field_geolocalisation']['#items'][0]['refinedLatEnd']) * pi()/180;
+  $lon2C = (float) check_plain($data['field_geolocalisation']['#items'][0]['refinedLngEnd']) * pi()/180;
+  $lat2 = (float) check_plain($data['field_geolocalisation']['#items'][0]['latEnd']) * pi()/180;
+  $lon2 = (float) check_plain($data['field_geolocalisation']['#items'][0]['lngEnd']) * pi()/180;
 
       $latStart = $lat1C > 0 ? $lat1C : $lat1;
       $latEnd = $lat2C > 0 ? $lat2C : $lat2;
