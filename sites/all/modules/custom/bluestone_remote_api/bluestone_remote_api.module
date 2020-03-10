@@ -15,8 +15,8 @@ function bluestone_remote_api_init() {
   $url_2 = variable_get('openradiation_server_rest_submit_api_url', '');
   if ((!$url_1 || !$url_2) && $user->uid == 1) {
     drupal_set_message(t("Dear super admin, you have not yet saved configuration for openradiation webservices, please go to !link to connect to openradiation API",
-        ['!link' => l('settings page', 'admin/config/services/measurements')]
-      ),
+      ['!link' => l('settings page', 'admin/config/services/measurements')]
+    ),
       'error'
     );
   }
@@ -191,6 +191,12 @@ function bluestone_create_measurement_node_from_webservice_datas($measure_datas,
   $node->field_geolocalisation['und'][0]['lat'] = $measure_datas["latitude"];
   $node->field_geolocalisation['und'][0]['lng'] = $measure_datas["longitude"];
 
+  $node->field_geolocalisation['und'][0]['refinedLat'] = $measure_datas["refinedLatitude"];
+  $node->field_geolocalisation['und'][0]['refinedLng'] = $measure_datas["refinedLongitude"];
+
+  $node->field_geolocalisation['und'][0]['refinedLatEnd'] = $measure_datas["refinedEndLatitude"];
+  $node->field_geolocalisation['und'][0]['refinedLngEnd'] = $measure_datas["refinedEndLongitude"];
+
   // date of the measure
   $node->field_time['und'][0]['value'] = strtotime($measure_datas["startTime"]);
 
@@ -234,6 +240,10 @@ function bluestone_create_measurement_node_from_webservice_datas($measure_datas,
   // altitude
   if (!empty($measure_datas['altitude'])) {
     $node->field_altitude['und'][0]['value'] = $measure_datas["altitude"];
+  }
+  // refined altitude
+  if (!empty($measure_datas['refinedAltitude'])) {
+    $node->field_altitude['und'][0]['value'] = $measure_datas["refinedAltitude"];
   }
   // altitude acurracy
   if (!empty($measure_datas['altitudeAccuracy'])) {
@@ -353,6 +363,31 @@ function bluestone_create_measurement_node_from_webservice_datas($measure_datas,
         'fid' => $file->fid,
         'filename' => $file_name.'.'.$ext,
     );
+  }
+
+  // rain
+  if (!empty($measure_datas['rain'])) {
+    $node->field_creator_name['und'][0]['value'] = $measure_datas["rain"];
+  }
+
+  // storm
+  if (!empty($measure_datas['storm'])) {
+    $node->field_creator_name['und'][0]['value'] = $measure_datas["storm"];
+  }
+
+  // seat Number
+  if (!empty($measure_datas['seatNumber'])) {
+    $node->field_creator_name['und'][0]['value'] = $measure_datas["seatNumber"];
+  }
+
+  // window Seat
+  if (!empty($measure_datas['windowSeat'])) {
+    $node->field_creator_name['und'][0]['value'] = $measure_datas["windowSeat"];
+  }
+
+  // flight Number
+  if (!empty($measure_datas['flightNumber'])) {
+    $node->field_creator_name['und'][0]['value'] = $measure_datas["flightNumber"];
   }
 
   node_save($node);
