@@ -54,7 +54,7 @@ function global_update_7002() {
 
 /**
  * Add correct taxonomy terms to qualification vocabulary
- */
+ 
 function global_update_7003() {
 
   $vocabulary = taxonomy_vocabulary_machine_name_load('measure_qualification_type');
@@ -94,6 +94,42 @@ function global_update_7003() {
   $term->field_term_machine_name['und'][0]['value'] = 'baddatatransmission';
   taxonomy_term_save($term);
 
+} */
+
+/**
+ * Add correct taxonomy terms to qualification vocabulary
+ */
+function global_update_7003() {
+
+  $vocabulary = taxonomy_vocabulary_machine_name_load('measure_qualification_type');
+
+  $term = new stdClass();
+  $vid = $vocabulary->vid;
+  $term->name = 'Ground Level' ;
+  $term->vid = $vid;
+  $term->field_term_machine_name['und'][0]['value'] = 'groundlevel';
+  taxonomy_term_save($term);
+
+  $term = new stdClass();
+  $vid = $vocabulary->vid;
+  $term->name = 'Plane' ;
+  $term->vid = $vid;
+  $term->field_term_machine_name['und'][0]['value'] = 'plane';
+  taxonomy_term_save($term);
+
+  $term = new stdClass();
+  $vid = $vocabulary->vid;
+  $term->name = 'Wrong Measurement' ;
+  $term->vid = $vid;
+  $term->field_term_machine_name['und'][0]['value'] = 'wrongmeasurement';
+  taxonomy_term_save($term);
+
+  $term = new stdClass();
+  $vid = $vocabulary->vid;
+  $term->name = 'Temporary Source' ;
+  $term->vid = $vid;
+  $term->field_term_machine_name['und'][0]['value'] = 'temporarysource';
+  taxonomy_term_save($term);
 }
 
 /**

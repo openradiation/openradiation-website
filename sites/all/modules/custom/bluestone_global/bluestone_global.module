@@ -115,6 +115,18 @@ function krumodev($content)
   krumo($content);
 }
 
+function time_getDiffInSecond($start, $end) {
+  $newDateStart = new DateObject($start);
+  $newDateEnd = new DateObject($end);
+
+  $interval = (new DateTime($newDateEnd))->diff(new DateTime($newDateStart));
+
+  $reference = new DateTimeImmutable;
+  $endTime = $reference->add($interval);
+
+  return $endTime->getTimestamp() - $reference->getTimestamp();
+
+}
 
 function time_elapsed2($start, $end) {
     $start = new DateTime($start);

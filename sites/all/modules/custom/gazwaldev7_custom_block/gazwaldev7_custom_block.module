@@ -2,6 +2,7 @@
 /**
  * Implements hook_block_info().
  */
+
 function gazwaldev7_custom_block_block_info() {
   $blocks = array();
   $blocks['custom_home_01'] = array(
@@ -19,6 +20,9 @@ function gazwaldev7_custom_block_block_info() {
   $blocks['openradiation_map'] = array(
     'info' => t('Openradiation map'),
   );
+  $blocks['openradiation_map_plane'] = array(
+    'info' => t('Plane map'),
+  );
   return $blocks;
 }
 
@@ -28,6 +32,8 @@ function gazwaldev7_custom_block_block_info() {
 function gazwaldev7_custom_block_block_view($delta = '') {
   $block = array();
   $url = variable_get('openradiation_server_rest_request_api_url', '');
+  
+  global $language; 
   switch($delta) {
     case 'custom_home_01' :
       $block['subject'] = '';
@@ -49,7 +55,7 @@ function gazwaldev7_custom_block_block_view($delta = '') {
       $variables = [];
       $block['content'] = theme('template_home_04', $variables);
       break;
-    case "openradiation_map" :
+    case 'openradiation_map' :
       $block['subject'] = '';
       $block['content'] = '<iframe
       id="openradiation-map-iframe"
@@ -57,8 +63,20 @@ function gazwaldev7_custom_block_block_view($delta = '') {
       style="overflow:hidden"
       height="700px"
       width="100%"
-      src="'.$url.'/openradiation">
+      src="'.$url.'/'.$language->language.'/openradiation/5/46/7/all/all/groundlevel/all/0/100/0/100">
       </iframe>';
+      break;
+    case 'openradiation_map_plane' :
+      $block['subject'] = '';
+      $block['content'] = '<iframe
+      id="openradiation-map-iframe"
+      frameborder="0"
+      style="overflow:hidden"
+      height="700px"
+      width="100%"
+      src="'.$url.'/'.$language->language.'/openradiation/4/46/2/all/all/plane/all/0/100/0/100">
+      </iframe>';
+      break;
   }
 
   return $block;

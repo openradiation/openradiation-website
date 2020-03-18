@@ -187,9 +187,22 @@ function bluestone_create_measurement_node_from_webservice_datas($measure_datas,
 
   // value of the measure in µSv/h
   $node->field_value['und'][0]['value'] = str_replace(',', '.', $measure_datas['value']);
+  
+  if (!empty($measure_datas['refinedLatitude']) && !empty($measure_datas['refinedLongitude']) ) {
+     $node->field_geolocalisation['und'][0]['lat'] = $measure_datas["refinedLatitude"];
+     $node->field_geolocalisation['und'][0]['lng'] = $measure_datas["refinedLongitude"];
+  } else {
+     $node->field_geolocalisation['und'][0]['lat'] = $measure_datas["latitude"];
+     $node->field_geolocalisation['und'][0]['lng'] = $measure_datas["longitude"];
+  }
 
-  $node->field_geolocalisation['und'][0]['lat'] = $measure_datas["latitude"];
-  $node->field_geolocalisation['und'][0]['lng'] = $measure_datas["longitude"];
+  if (!empty($measure_datas['refinedEndLatitude']) && !empty($measure_datas['refinedEndLongitude']) ) {
+     $node->field_geolocalisation['und'][0]['endLat'] = $measure_datas["refinedEndLatitude"];
+     $node->field_geolocalisation['und'][0]['endLng'] = $measure_datas["refinedEndLongitude"];
+  } elseif (!empty($measure_datas['endLatitude']) && !empty($measure_datas['endLongitude']) ) {
+     $node->field_geolocalisation['und'][0]['endLat'] = $measure_datas["endLatitude"];
+     $node->field_geolocalisation['und'][0]['endLng'] = $measure_datas["endLongitude"];
+  }
 
   // date of the measure
   $node->field_time['und'][0]['value'] = strtotime($measure_datas["startTime"]);
@@ -232,9 +245,12 @@ function bluestone_create_measurement_node_from_webservice_datas($measure_datas,
   }
   
   // altitude
-  if (!empty($measure_datas['altitude'])) {
+  if (!empty($measure_datas['refinedAltitude'])) {
+    $node->field_altitude['und'][0]['value'] = $measure_datas["refinedAltitude"];
+  } elseif (!empty($measure_datas['altitude'])) {
     $node->field_altitude['und'][0]['value'] = $measure_datas["altitude"];
   }
+
   // altitude acurracy
   if (!empty($measure_datas['altitudeAccuracy'])) {
     $node->field_altitude_accuracy['und'][0]['value'] = str_replace(',', '.', $measure_datas['altitudeAccuracy']);
@@ -353,6 +369,43 @@ function bluestone_create_measurement_node_from_webservice_datas($measure_datas,
         'fid' => $file->fid,
         'filename' => $file_name.'.'.$ext,
     );
+  }
+
+  // rain
+  if (!empty($measure_datas['rain'])) {
+    if ("true" == $measure_datas['rain']) {
+        $node->field_rain['und'][0]['value'] = "1";
+    } else {
+        $node->field_rain['und'][0]['value'] = "0";
+    }
+  }
+
+  // storm
+  if (!empty($measure_datas['storm'])) {
+    if ("true" == $measure_datas['storm']) {
+        $node->field_storm['und'][0]['value'] = "1";
+    } else {
+        $node->field_storm['und'][0]['value'] = "0";
+    }
+  }
+
+  // windowSeat
+  if (!empty($measure_datas['windowSeat'])) {
+    if ("true" == $measure_datas['windowSeat']) {
+        $node->field_window_seat['und'][0]['value'] = "1";
+    } else {
+        $node->field_window_seat['und'][0]['value'] = "0";
+    }
+  }
+
+  // seat Number
+  if (!empty($measure_datas['seatNumber'])) {
+    $node->field_seat_number['und'][0]['value'] = $measure_datas["seatNumber"];
+  }
+
+  // flight Number
+  if (!empty($measure_datas['flightNumber'])) {
+    $node->field_flight_number['und'][0]['value'] = $measure_datas["flightNumber"];
   }
 
   node_save($node);
@@ -569,6 +622,37 @@ function _bluestone_get_measurement_datas_from_node($node) {
 
   if (!empty($node->field_measurement_height['und'][0]['value'])) {
     $datas['measurementHeight'] = (int)$node->field_measurement_height['und'][0]['value'];
+  }
+  
+  if (!empty($node->field_rain['und'][0]['value'])) {
+    if ("1" == $node->field_rain['und'][0]['value']) {
+        $datas['rain']="true";
+    } else {
+        $datas['rain']="false";
+    }
+  }
+  
+  if (!empty($node->field_flight_number['und'][0]['value'])) {
+    $datas['flightNumber'] = $node->field_flight_number['und'][0]['value'];
+  }
+  if (!empty($node->field_seat_number['und'][0]['value'])) {
+    $datas['seatNumber'] = $node->field_seat_number['und'][0]['value'];
+  }
+
+  if (!empty($node->field_storm['und'][0]['value'])) {
+    if ("1" == $node->field_storm['und'][0]['value']) {
+        $datas['storm']="true";
+    } else {
+        $datas['storm']="false";
+    }
+  }
+
+  if (!empty($node->field_window_seat['und'][0]['value'])) {
+    if ("1" == $node->field_window_seat['und'][0]['value']) {
+        $datas['windowSeat']="true";
+    } else {
+        $datas['windowSeat']="false";
+    }
   }
 
   if (!empty($node->field_measure_tags['und'][0]['tid'])) {
