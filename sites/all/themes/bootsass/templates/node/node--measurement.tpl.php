@@ -112,9 +112,60 @@ hide($content['links']);
               <li><span class="blabel"><?php print t('Measurement environment') ?> : </span><?php print render($content["field_measurementenvironment"]) ?></li>
               <?php
               if ($content["field_measurementenvironment"][0]['#markup'] == 'Plane' || $content["field_measurementenvironment"][0]['#markup'] == 'Avion') {
-                showItemsPlane($content);
-              } else {
-                showRain($content);
+		print ('<li><span class="blabel">');
+    		print t('Flight number');
+    		print (' : </span>');
+    		print render($content['field_flight_number']);
+    		print ('</li>');
+
+    		print ('<li><span class="blabel">');
+    		print t('Seat number');
+    		print (' : </span>');
+    		print render($content['field_seat_number']);
+    		print ('</li>');
+
+   		print('<li><span class="blabel" >');
+    		print t('Weather');
+    		print(' : </span>');
+    		if (isset($content['field_storm']['#items'][0]['value'])) {
+        		if ("1" == $content['field_storm']['#items'][0]['value']) {
+               			print("<img src='/sites/all/themes/bootsass/assets/images/icon-plane-storm-on.png' width='20' height='20' style='vertical-align: top;' /> ");
+                		print t('Storm crossing');
+       			} else {
+                		print("<img src='/sites/all/themes/bootsass/assets/images/env_plane.png' width='20' height='20' style='vertical-align: top;' /> ");
+                		print t('No storm');
+        		}
+     		}
+    		print ('</li>');
+
+    		print('<li><span class="blabel" >');
+    		print t('Seat position');
+    		print(' : </span>');
+    		if (isset($content['field_window_seat']['#items'][0]['value'])) {
+        		if ("1" == $content['field_window_seat']['#items'][0]['value']) {
+                		print("<img src='/sites/all/themes/bootsass/assets/images/icon-window-on.png' width='20' height='20' style='vertical-align: top;' /> ");
+                		print t('Window');
+        		} else {
+                		print("<img src='/sites/all/themes/bootsass/assets/images/icon-aisle-on.png' width='20' height='20' style='vertical-align: top;' /> ");
+                		print t('Aisle/Middle');
+        		}
+     		}
+    		print ('</li>'); 		
+              
+	     } else {
+		print('<li><span class="blabel" >');
+    		print t('Weather');
+    		print(' : </span>');
+    		if (isset($content['field_rain']['#items'][0]['value'])) {
+        		if ("1" == $content['field_rain']['#items'][0]['value']) {
+                		print("<img src='/sites/all/themes/bootsass/assets/images/icon-rain-on.png' width='20' height='20' style='vertical-align: top;' /> ");
+                		print t('Rain');
+        		} else {
+                		print("<img src='/sites/all/themes/bootsass/assets/images/icon-sun-on.png' width='20' height='20' style='vertical-align: top;' /> ");
+                		print t('No rain');
+        		}
+     		}
+    		print ('</li>');
               } ?>
 
               <li><span class="blabel"><?php print t('Tags') ?> : </span><?php print render($content['field_measure_tags']) ?></li>
@@ -172,70 +223,5 @@ hide($content['links']);
 
 </div>
 
-
-<?php
-
-    // show if measurement environment is not plane
-  function showRain($content) {
-    print('<li><span class="blabel" >');
-    print t('Weather');
-    print(' : </span>');
-    if (isset($content['field_rain']['#items'][0]['value'])) {
-	if ("1" == $content['field_rain']['#items'][0]['value']) {
-         	print("<img src='/sites/all/themes/bootsass/assets/images/icon-rain-on.png' width='20' height='20' style='vertical-align: top;' /> ");
-		print t('Rain');
-        } else {
-            	print("<img src='/sites/all/themes/bootsass/assets/images/icon-sun-on.png' width='20' height='20' style='vertical-align: top;' /> ");
-         	print t('No rain');
-	}
-     } 
-    print ('</li>');
-  }
-
-  // show if measurement environment is plane
-  function showItemsPlane($content) {
-    print ('<li><span class="blabel">');
-    print t('Flight number');
-    print (' : </span>');
-    print render($content['field_flight_number']);
-    print ('</li>');
-
-    print ('<li><span class="blabel">');
-    print t('Seat number');
-    print (' : </span>');
-    print render($content['field_seat_number']);
-    print ('</li>');
-
-    print('<li><span class="blabel" >');
-    print t('Weather');
-    print(' : </span>');
-    if (isset($content['field_storm']['#items'][0]['value'])) {
-        if ("1" == $content['field_storm']['#items'][0]['value']) {
-                print("<img src='/sites/all/themes/bootsass/assets/images/icon-plane-storm-on.png' width='20' height='20' style='vertical-align: top;' /> ");
-                print t('Storm crossing');
-        } else {
-                print("<img src='/sites/all/themes/bootsass/assets/images/env_plane.png' width='20' height='20' style='vertical-align: top;' /> ");
-                print t('No storm');
-        }
-     }
-    print ('</li>');
-
-    print('<li><span class="blabel" >');
-    print t('Seat position');
-    print(' : </span>');
-    if (isset($content['field_window_seat']['#items'][0]['value'])) {
-        if ("1" == $content['field_window_seat']['#items'][0]['value']) {
-                print("<img src='/sites/all/themes/bootsass/assets/images/icon-window-on.png' width='20' height='20' style='vertical-align: top;' /> ");
-                print t('Window');
-        } else {
-                print("<img src='/sites/all/themes/bootsass/assets/images/icon-aisle-on.png' width='20' height='20' style='vertical-align: top;' /> ");
-                print t('Aisle/Middle');
-        }
-     }
-    print ('</li>');
-
-  }
-  
-?>
 
 
