@@ -188,7 +188,7 @@ function bluestone_create_measurement_node_from_webservice_datas($measure_datas,
   // value of the measure in µSv/h
   $node->field_value['und'][0]['value'] = str_replace(',', '.', $measure_datas['value']);
   
-  if (!empty($measure_datas['refinedLatitude']) && !empty($measure_datas['refinedLongitude']) ) {
+  if (isset($measure_datas['refinedLatitude']) && isset($measure_datas['refinedLongitude']) ) {
      $node->field_geolocalisation['und'][0]['lat'] = $measure_datas["refinedLatitude"];
      $node->field_geolocalisation['und'][0]['lng'] = $measure_datas["refinedLongitude"];
   } else {
@@ -196,12 +196,12 @@ function bluestone_create_measurement_node_from_webservice_datas($measure_datas,
      $node->field_geolocalisation['und'][0]['lng'] = $measure_datas["longitude"];
   }
 
-  if (!empty($measure_datas['refinedEndLatitude']) && !empty($measure_datas['refinedEndLongitude']) ) {
-     $node->field_geolocalisation['und'][0]['endLat'] = $measure_datas["refinedEndLatitude"];
-     $node->field_geolocalisation['und'][0]['endLng'] = $measure_datas["refinedEndLongitude"];
-  } elseif (!empty($measure_datas['endLatitude']) && !empty($measure_datas['endLongitude']) ) {
-     $node->field_geolocalisation['und'][0]['endLat'] = $measure_datas["endLatitude"];
-     $node->field_geolocalisation['und'][0]['endLng'] = $measure_datas["endLongitude"];
+  if (isset($measure_datas['refinedEndLatitude']) && isset($measure_datas['refinedEndLongitude']) ) {
+     $node->field_geolocalisation2['und'][0]['lat'] = $measure_datas["refinedEndLatitude"];
+     $node->field_geolocalisation2['und'][0]['lng'] = $measure_datas["refinedEndLongitude"];
+  } elseif (isset($measure_datas['endLatitude']) && isset($measure_datas['endLongitude']) ) {
+     $node->field_geolocalisation2['und'][0]['lat'] = $measure_datas["endLatitude"];
+     $node->field_geolocalisation2['und'][0]['lng'] = $measure_datas["endLongitude"];
   }
 
   // date of the measure
@@ -245,9 +245,9 @@ function bluestone_create_measurement_node_from_webservice_datas($measure_datas,
   }
   
   // altitude
-  if (!empty($measure_datas['refinedAltitude'])) {
+  if (isset($measure_datas['refinedAltitude'])) {
     $node->field_altitude['und'][0]['value'] = $measure_datas["refinedAltitude"];
-  } elseif (!empty($measure_datas['altitude'])) {
+  } elseif (isset($measure_datas['altitude'])) {
     $node->field_altitude['und'][0]['value'] = $measure_datas["altitude"];
   }
 
@@ -372,7 +372,7 @@ function bluestone_create_measurement_node_from_webservice_datas($measure_datas,
   }
 
   // rain
-  if (!empty($measure_datas['rain'])) {
+  if (isset($measure_datas['rain'])) {
     if ("true" == $measure_datas['rain']) {
         $node->field_rain['und'][0]['value'] = "1";
     } else {
@@ -381,7 +381,7 @@ function bluestone_create_measurement_node_from_webservice_datas($measure_datas,
   }
 
   // storm
-  if (!empty($measure_datas['storm'])) {
+  if (isset($measure_datas['storm'])) {
     if ("true" == $measure_datas['storm']) {
         $node->field_storm['und'][0]['value'] = "1";
     } else {
@@ -390,7 +390,7 @@ function bluestone_create_measurement_node_from_webservice_datas($measure_datas,
   }
 
   // windowSeat
-  if (!empty($measure_datas['windowSeat'])) {
+  if (isset($measure_datas['windowSeat'])) {
     if ("true" == $measure_datas['windowSeat']) {
         $node->field_window_seat['und'][0]['value'] = "1";
     } else {
@@ -624,7 +624,7 @@ function _bluestone_get_measurement_datas_from_node($node) {
     $datas['measurementHeight'] = (int)$node->field_measurement_height['und'][0]['value'];
   }
   
-  if (!empty($node->field_rain['und'][0]['value'])) {
+  if (isset($node->field_rain['und'][0]['value'])) {
     if ("1" == $node->field_rain['und'][0]['value']) {
         $datas['rain']="true";
     } else {
@@ -639,7 +639,7 @@ function _bluestone_get_measurement_datas_from_node($node) {
     $datas['seatNumber'] = $node->field_seat_number['und'][0]['value'];
   }
 
-  if (!empty($node->field_storm['und'][0]['value'])) {
+  if (isset($node->field_storm['und'][0]['value'])) {
     if ("1" == $node->field_storm['und'][0]['value']) {
         $datas['storm']="true";
     } else {
@@ -647,7 +647,7 @@ function _bluestone_get_measurement_datas_from_node($node) {
     }
   }
 
-  if (!empty($node->field_window_seat['und'][0]['value'])) {
+  if (isset($node->field_window_seat['und'][0]['value'])) {
     if ("1" == $node->field_window_seat['und'][0]['value']) {
         $datas['windowSeat']="true";
     } else {

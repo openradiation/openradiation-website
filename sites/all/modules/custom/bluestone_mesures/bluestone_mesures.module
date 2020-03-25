@@ -298,7 +298,8 @@ function bluestone_mesures_form_alter(&$form, &$form_state, $form_id)
         $form['field_organisation_reporting']['#access'] = false; 
         $form['field_manual_reporting']['#access'] = false; 
         $form['field_atypical_measurement']['#access'] = false; 
-        $form['field_creator_name']['#access'] = false; 
+        $form['field_creator_name']['#access'] = false;
+        $form['field_geolocalisation2']['#access'] = false; 
     }
     //add user password field, for sending measure to the API
     $form['user_password'] = array(

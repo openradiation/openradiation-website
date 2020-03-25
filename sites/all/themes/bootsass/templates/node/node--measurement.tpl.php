@@ -80,19 +80,19 @@ hide($content['links']);
                     print t(' - ');   /*print t('NA');*/
                   } else {
                     $newdate1 = new DateObject($date1);
-                    $newdate2 = new DateObject($date2);
+                    $newdate2 = new DateObject($date2); 
                     $interv = time_elapsed2($newdate1, $newdate2);
                     print render($interv);
                   }
                   ?>
               </li>             
 
-              <li><span class="blabel"><?php print t('Distance travel during measure') ?> : </span>
-              <?php if (!empty($content["field_geolocation"]['#items'][0]['latEnd']) && !empty($content["field_geolocation"]['#items'][0]['latEnd'])) {
+              <li><span class="blabel"><?php print t('Distance travelled during measurement') ?> : </span>
+              <?php if (!empty($content["field_geolocalisation2"]['#items'][0]['lat']) && !empty($content["field_geolocalisation2"]['#items'][0]['lng'])) {
  		$lat = (float) check_plain($content['field_geolocalisation']['#items'][0]['lat']) * pi()/180;
   		$lng = (float) check_plain($content['field_geolocalisation']['#items'][0]['lng']) * pi()/180;
-                $latEnd = (float) check_plain($content['field_geolocalisation']['#items'][0]['latEnd']) * pi()/180;
-                $lngEnd = (float) check_plain($content['field_geolocalisation']['#items'][0]['lngEnd']) * pi()/180;
+                $latEnd = (float) check_plain($content['field_geolocalisation2']['#items'][0]['lat']) * pi()/180;
+                $lngEnd = (float) check_plain($content['field_geolocalisation2']['#items'][0]['lng']) * pi()/180;
 		$alt = 0;
 		if (isset($content['field_altitude']['#items'][0]['value'])) {
 			$alt = (float) check_plain($content['field_altitude']);
@@ -100,9 +100,9 @@ hide($content['links']);
       		$distance = round(acos(sin($lat)*sin($latEnd) + cos($lat)*cos($latEnd)*cos($lng-$lngEnd))  * (6366*1000 + $alt), 0);
 		print $distance;
 		print (' m');
-		if (!empty($content["field_time"]['#items'][0]['value2'])) {
-		   $duration = time_getDiffInSecond($content["field_time"]['#items'][0]['value2'],$content["field_time"]['#items'][0]['value']);
-                   $speed = round((($duration*3600)/($distance*1000)),0); 
+		if (!empty($content["field_time"]['#items'][0]['value2']) && ($date1 != $date2) ) {
+		   $duration = $newdate2->getTimestamp() - $newdate1->getTimestamp();
+                   $speed = round(($distance/1000)/($duration/3600),0); 
                    print(' (');
                    print($speed);
 		   print(' km/h)');
