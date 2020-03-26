@@ -626,9 +626,9 @@ function _bluestone_get_measurement_datas_from_node($node) {
   
   if (isset($node->field_rain['und'][0]['value'])) {
     if ("1" == $node->field_rain['und'][0]['value']) {
-        $datas['rain']="true";
+        $datas['rain']=true;
     } else {
-        $datas['rain']="false";
+        $datas['rain']=false;
     }
   }
   
@@ -641,17 +641,17 @@ function _bluestone_get_measurement_datas_from_node($node) {
 
   if (isset($node->field_storm['und'][0]['value'])) {
     if ("1" == $node->field_storm['und'][0]['value']) {
-        $datas['storm']="true";
+        $datas['storm']=true;
     } else {
-        $datas['storm']="false";
+        $datas['storm']=false;
     }
   }
 
   if (isset($node->field_window_seat['und'][0]['value'])) {
     if ("1" == $node->field_window_seat['und'][0]['value']) {
-        $datas['windowSeat']="true";
+        $datas['windowSeat']=true;
     } else {
-        $datas['windowSeat']="false";
+        $datas['windowSeat']=false;
     }
   }
 
