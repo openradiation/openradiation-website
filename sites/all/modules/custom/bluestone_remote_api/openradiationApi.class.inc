@@ -125,7 +125,7 @@ class openradiationApi {
           '@url' => $url,
           '@datas' => json_encode($datas, TRUE),
           '@status' => $response->getStatusCode(),
-          '@response' => json_encode($response->json()),
+          '@response' => json_encode($response->getBody()),
         ],
         $log_flag
       );

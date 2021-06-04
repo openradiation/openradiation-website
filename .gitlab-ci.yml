@@ -1,0 +1,16 @@
+---
+
+include:
+  - project: "gitlab-tools/gci-templates"
+    file: "/docker/build/.gitlab-ci.yml"
+
+variables:
+  DOCKER_REGISTRY_PATH: "openradiation"
+
+stages:
+  - build-docker
+
+push-docker-image:
+    script:
+        - docker login -u ${DOCKER_REGISTRY_USER} -p "${DOCKER_REGISTRY_PASSWORD}" ${DOCKER_REGISTRY}
+        - docker build -t ${DOCKER_IMAGE} . --network=host; docker push ${DOCKER_IMAGE}
