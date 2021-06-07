@@ -1,12 +1,12 @@
 FROM drupal:7.80
 
-#COPY ./modules /var/www/html/modules
-#COPY ./profiles /var/www/html/profiles
-#COPY ./sites /var/www/html/sites
-#COPY ./themes /var/www/html/themes
-#COPY ./vendor /var/www/html/vendor
-#COPY ./favicon.ico /var/www/html/
-#COPY ./composer.json /var/www/html/
+COPY ./modules /var/www/html/modules
+COPY ./profiles /var/www/html/profiles
+COPY ./sites /var/www/html/sites
+COPY ./themes /var/www/html/themes
+COPY ./vendor /var/www/html/vendor
+COPY ./favicon.ico /var/www/html/
+COPY ./composer.json /var/www/html/
 
 # Create private directory and files directory
 RUN mkdir /var/www/html/private && chmod 777 /var/www/html/private \
