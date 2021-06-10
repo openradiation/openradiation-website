@@ -44,11 +44,11 @@ function bluestone_measure_create_page_callback($uuid) {
     return t("Measure data not found.");
   }
 
-  if (empty($response->json()['data'])) {
+  if (empty(json_decode($response->getBody(), true)['data'])) {
     return t("Empty data returned from server");
   }
 
-  $measure_datas = $response->json()['data'];
+  $measure_datas = json_decode($response->getBody(), true)['data'];
 
   // get users datas from remote API for this measure
   // $user_datas    = bluestone_webservice_get_user($measure_datas['user_uuid']);
@@ -189,4 +189,3 @@ function bluestone_mesures_services_config_form_validate($form, &$form_state) {
   $form_state['values']['openradiation_server_rest_request_api_url'] = trim($form_state['values']['openradiation_server_rest_request_api_url'], '/');
   $form_state['values']['openradiation_server_rest_submit_api_url'] = trim($form_state['values']['openradiation_server_rest_submit_api_url'], '/');
 }
-

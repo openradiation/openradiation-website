@@ -125,7 +125,7 @@ class openradiationApi {
           '@url' => $url,
           '@datas' => json_encode($datas, TRUE),
           '@status' => $response->getStatusCode(),
-          '@response' => json_encode($response->getBody()),
+          '@response' => json_encode(json_decode($response->getBody(), true)),
         ],
         $log_flag
       );
@@ -167,7 +167,7 @@ class openradiationApi {
           '@url' => $url,
           '@posted_datas' => json_encode($request_datas, TRUE),
           '@status' => $response->getStatusCode(),
-          '@response' => json_encode($response->json()),
+          '@response' => json_encode(json_decode($response->getBody(), true)),
         ],
         $log_flag
       );
@@ -208,7 +208,7 @@ class openradiationApi {
           '@url' => $url,
           '@posted_datas' => json_encode($request_datas, TRUE),
           '@status' => $response->getStatusCode(),
-          '@response' => json_encode($response->json()),
+          '@response' => json_encode(json_decode($response->getBody(), true)),
         ],
         $log_flag
       );

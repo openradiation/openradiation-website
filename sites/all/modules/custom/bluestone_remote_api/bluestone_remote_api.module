@@ -477,12 +477,12 @@ function _bluestone_remote_api_sync_get_calculated_values($node) {
     return FALSE;
   }
 
-  if (empty($response->json()['data'])) {
+  if (empty(json_decode($response->getBody(), true)['data'])) {
     watchdog('openradiationApi',  "Empty data returned by api server while fetching mesure from uuid, server responded: " . check_plain($response->getStatusCode() . ' ' . $response->getReasonPhrase()), array(), WATCHDOG_WARNING);
     return FALSE;
   }
 
-  $measure_datas = $response->json()['data'];
+  $measure_datas = json_decode($response->getBody(), true)['data'];
 
   //get back missing info
 
