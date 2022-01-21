@@ -1,4 +1,4 @@
-FROM drupal:7.82
+FROM drupal:7.85
 
 COPY ./modules /var/www/html/modules
 COPY ./profiles /var/www/html/profiles
