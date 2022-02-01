@@ -6,9 +6,8 @@ dependencies[] = rate
 dependencies[] = date
 files[] = rate_expiration.install
 files[] = rate_expiration.module
-; Information added by Drupal.org packaging script on 2014-02-10
-version = "7.x-1.7"
+; Information added by Drupal.org packaging script on 2022-01-31
+version = "7.x-1.8"
 core = "7.x"
 project = "rate"
-datestamp = "1392071605"
-
+datestamp = "1643649651"

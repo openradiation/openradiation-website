@@ -127,7 +127,7 @@ function rate_menu() {
 
   $menu[RATE_PATH_AHAH] = array(
     'page callback' => 'rate_vote_ahah',
-    'access arguments' => array('access content'),
+    'access callback' => 'rate_vote_ahah_access',
     'type' => MENU_CALLBACK
   );
 
@@ -824,6 +824,26 @@ function rate_comment_view_alter(&$comment) {
 }
 
 /**
+ * Access callback for AHAH callback.
+ */
+function rate_vote_ahah_access() {
+  $content_type = preg_replace('/[^\\w\\-]/', '', $_GET['content_type']);
+  $content_id = (int) $_GET['content_id'];
+  if ($content_type == 'node') {
+    // Check if the node exists and if the user has view access.
+    return ($node = node_load($content_id)) && node_access('view', $node);
+  }
+  if ($content_type == 'comment' && module_exists('comment')) {
+    // Check if the comment exists, is not hidden and if the user has view access on its node.
+    if (($comment = comment_load($content_id)) && ($node = node_load($comment->nid))) {
+      return $node->comment != COMMENT_NODE_HIDDEN && node_access('view', $node) && user_access('access comments');
+    }
+  }
+  // Rate only works on nodes and comments.
+  return FALSE;
+}
+
+/**
  * AHAH callback for the vote buttons.
  */
 function rate_vote_ahah() {
@@ -1180,7 +1200,7 @@ function rate_theme() {
  */
 function rate_preprocess_rate_widget(&$variables) {
   extract($variables);
-
+  
   $buttons = array();
   foreach ($links as $link) {
     $classes = 'rate-btn';
