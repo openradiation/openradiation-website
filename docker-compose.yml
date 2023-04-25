@@ -1,0 +1,35 @@
+version: '3.8'
+
+volumes:
+  database: {}
+
+services:
+  db:
+    image: postgres:9.4
+    environment:
+      POSTGRES_USER: openradiation
+      POSTGRES_PASSWORD: openradiation
+    volumes:
+   #   - database:/var/lib/postgresql/data
+      - ./dump:/tmp/dump
+    ports:
+      - 5432:5432
+    restart: always
+
+  drupal:
+    build:
+        context: docker/dev
+    volumes:
+      - ./drupal:/var/www/html/
+      - type: bind
+        source: ./settings.php
+        target: /var/www/html/sites/default/settings.php
+        read_only: true
+    working_dir: /var/www/html/sites/default    
+    ports:
+      - 8085:80
+    restart: always
+    links:
+      - db
+
+
