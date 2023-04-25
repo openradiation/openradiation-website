@@ -155,7 +155,7 @@ function rate_widget_form($form, &$form_state, $id = NULL) {
     $widget->delete_vote_on_second_click = 0;
     $widget->use_source_translation = TRUE;
   }
-  
+
   // Determine the template from GET (which is only available before the form
   // was post) or from post values (only available after the form was posted).
   if (isset($form_state['post']['widget_template'])) {
@@ -182,7 +182,7 @@ function rate_widget_form($form, &$form_state, $id = NULL) {
       $widget->value_type = $template->value_type;
     }
   }
-  
+
   if ($id) {
     $form['#widget_id'] = $id;
   }
@@ -193,7 +193,7 @@ function rate_widget_form($form, &$form_state, $id = NULL) {
     '#type' => 'hidden',
     '#default_value' => $widget->template,
   );
-  
+
   if ($id) {
     $link = l(t('change the widget type'), str_replace('%', $id, RATE_PATH_ADMIN_PAGE_TEMPLATE));
     if ($widget->template == 'custom') {
@@ -238,7 +238,7 @@ function rate_widget_form($form, &$form_state, $id = NULL) {
     '#description' => t('Tag used for VotingAPI. Widgets with the same tag share their voting results.'),
     '#required' => TRUE,
   );
-  
+
   if ($widget->customizable) {
     $options = array(
       'percent' => t('Percentage'),
@@ -435,7 +435,7 @@ function rate_widget_form($form, &$form_state, $id = NULL) {
     '#collapsed' => TRUE,
     '#description' => t('Note that these settings do not apply for rate widgets inside views. Widgets in views will display the average voting when a relationship to the voting results is used and the users vote in case of a relationship to the votes.'),
   );
-  
+
   $options = array(
     RATE_AVERAGE => t('Average rating'),
     RATE_USER => t('Users vote if available, empty otherwise'),
@@ -511,7 +511,7 @@ function rate_widget_form($form, &$form_state, $id = NULL) {
     '#default_value' => $widget->noperm_behaviour,
     '#description' => t('Choose an action what will happen if a user clicks on the widget but doesn\'t have the permission to vote.'),
   );
-  
+
   if (module_exists('translation')) {
     $form['translations'] = array(
       '#type' => 'fieldset',
@@ -549,7 +549,7 @@ function rate_widget_form_validate($form, &$form_state) {
   if (!preg_match('/^[a-z\\_0-9]+$/i', $form_state['values']['tag'])) {
     form_set_error('tag', t('The vote tag may only contain alphanumeric characters and underscores.'));
   }
-  
+
   $customizable = TRUE;
   if ($form_state['values']['widget_template'] != 'custom') {
     if ($template = _rate_get_template($form_state['values']['widget_template'])) {
@@ -623,7 +623,7 @@ function rate_widget_form_submit($form, &$form_state) {
   else {
     $widget->use_source_translation = TRUE;
   }
-  
+
   if ($widget->template != 'custom') {
     // Take over the values from the template.
     $template = _rate_get_template($widget->template);
@@ -806,7 +806,7 @@ function rate_widget_delete_form_submit($form, &$form_state) {
  * Admin settings form.
  */
 function rate_settings_form($form, &$form_state) {
-  
+
   $form['bot'] = array(
     '#type' => 'fieldset',
     '#title' => t('Bot detection'),
@@ -814,24 +814,24 @@ function rate_settings_form($form, &$form_state) {
     '#collapsbile' => FALSE,
     '#collapsed' => FALSE,
   );
-  
+
   $options = drupal_map_assoc(array(0, 10, 25, 50, 100, 250, 500, 1000));
   $options[0] = t('disable');
-  
+
   $form['bot'][RATE_VAR_BOT_MINUTE_THRESHOLD] = array(
     '#type' => 'select',
     '#title' => t('1 minute threshold'),
     '#options' => $options,
     '#default_value' => variable_get(RATE_VAR_BOT_MINUTE_THRESHOLD, 25),
   );
-  
+
   $form['bot'][RATE_VAR_BOT_HOUR_THRESHOLD] = array(
     '#type' => 'select',
     '#title' => t('1 hour threshold'),
     '#options' => $options,
     '#default_value' => variable_get(RATE_VAR_BOT_HOUR_THRESHOLD, 250),
   );
-  
+
   /* Feature planned for 1.5 release
   $form['bot'][RATE_VAR_BOT_RETROACTIVE] = array(
     '#type' => 'checkbox',
@@ -840,14 +840,14 @@ function rate_settings_form($form, &$form_state) {
     '#description' => t('The bot detection is a retrospective process. When enabled all votes done from the bots IP will be deleted when the bot hits the threshold.'),
   );
   */
-  
+
   $form['bot'][RATE_VAR_BOT_BOTSCOUT_KEY] = array(
     '#type' => 'textfield',
     '#title' => t('BotScout.com API key'),
     '#default_value' => variable_get(RATE_VAR_BOT_BOTSCOUT_KEY, ''),
     '#description' => t('Rate will check the voters IP against the BotScout database if it has an API key. You can request a key at %url.', array('%url' => 'http://botscout.com/getkey.htm')),
   );
-  
+
   return system_settings_form($form);
 }
 
@@ -859,7 +859,7 @@ function rate_settings_form_validate($form, &$form_state) {
     $url = "http://botscout.com/test/?ip=84.16.230.111&key=" . $form_state['values'][RATE_VAR_BOT_BOTSCOUT_KEY];
     $data = drupal_http_request($url, array('timeout' => 5));
     if ($data->code == 200) {
-      if ($data->data{0} == 'Y' || $data->data{0} == 'N') {
+      if ($data->data[0] == 'Y' || $data->data[0] == 'N') {
         drupal_set_message(t('Rate has succesfully contacted the BotScout server.'));
       }
       else {

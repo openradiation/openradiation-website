@@ -333,7 +333,7 @@ function entityreference_prepopulate_get_values($field, $instance, $validate = T
  */
 function entityreference_prepopulate_get_values_from_cache($field, $instance) {
   // Try to get the form out of cache.
-  if (!$form_build_id = isset($_GET['form_build_id']) ? $_GET['form_build_id'] : isset($_POST['form_build_id']) ? $_POST['form_build_id'] : NULL) {
+  if (!$form_build_id = ($_GET['form_build_id'] ?? isset($_POST['form_build_id'])) ? $_POST['form_build_id'] : NULL) {
     return;
   }
 
@@ -343,7 +343,7 @@ function entityreference_prepopulate_get_values_from_cache($field, $instance) {
   form_get_cache($form_build_id, $form_state);
 
   // If successful, get the value from the form_state.
-  return isset($form_state['entityreference_prepopulate'][$instance['entity_type']][$instance['bundle']][$field_name]) ? $form_state['entityreference_prepopulate'][$instance['entity_type']][$instance['bundle']][$field_name] : FALSE;
+  return $form_state['entityreference_prepopulate'][$instance['entity_type']][$instance['bundle']][$field_name] ?? FALSE;
 }
 
 /**

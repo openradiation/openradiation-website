@@ -2,7 +2,7 @@
 
 /**
  * Check if the given IP is a local IP-address.
- * 
+ *
  * @param string $ip
  * @return bool
  */
@@ -21,39 +21,39 @@ function rate_bots_is_local($ip) {
 
 /**
  * Check if the current user is blocked.
- * 
+ *
  * This function will first check if the user is already known to be a bot.
  * If not, it will check if we have valid reasons to assume the user is a bot.
- * 
+ *
  * @return bool
  */
 function rate_bots_is_blocked() {
   $ip = ip_address();
   $agent = $_SERVER['HTTP_USER_AGENT'];
-  
+
   if (rate_bots_is_local($ip)) {
     // The IP-address is a local IP-address. This is probably because of
     // misconfigured proxy servers. Do only the user agent check.
     return rate_bots_check_agent($agent);
   }
-  
+
   if (rate_bots_check_ip($ip)) {
     return TRUE;
   }
-  
+
   if (rate_bots_check_agent($agent)) {
     // Identified as a bot by its user agent. Register this bot by IP-address
     // as well, in case this bots uses multiple agent strings.
     rate_bots_register_bot($ip);
     return TRUE;
   }
-  
+
   $threshold = variable_get(RATE_VAR_BOT_MINUTE_THRESHOLD, 25);
   if ($threshold && (rate_bots_check_threshold($ip, 60) > $threshold)) {
     rate_bots_register_bot($ip);
     return TRUE;
   }
-  
+
   $threshold = variable_get(RATE_VAR_BOT_HOUR_THRESHOLD, 250);
   // Always count, even if threshold is disabled. This is to determine if we
   // can skip the BotScout check.
@@ -62,18 +62,18 @@ function rate_bots_is_blocked() {
     rate_bots_register_bot($ip);
     return TRUE;
   }
-  
+
   if (!$count && rate_bots_check_botscout($ip)) {
     rate_bots_register_bot($ip);
     return TRUE;
   }
-  
+
   return FALSE;
 }
 
 /**
  * Register new bot.
- * 
+ *
  * @param string $ip
  */
 function rate_bots_register_bot($ip) {
@@ -82,7 +82,7 @@ function rate_bots_register_bot($ip) {
 
 /**
  * Check if the IP-address exists in the local bot database.
- * 
+ *
  * @param string $ip
  * @return bool
  */
@@ -97,7 +97,7 @@ function rate_bots_check_ip($ip) {
 
 /**
  * Check if the given user agent matches the local bot database.
- * 
+ *
  * @param string $agent
  * @return bool
  */
@@ -108,7 +108,7 @@ function rate_bots_check_agent($agent) {
 
 /**
  * Check the number of votes between now and $interval seconds ago.
- * 
+ *
  * @param string $ip
  * @param int $interval
  * @return int
@@ -120,7 +120,7 @@ function rate_bots_check_threshold($ip, $interval) {
 
 /**
  * Check if the IP is in the BotScout database.
- * 
+ *
  * @param string $ip
  * @return bool
  */
@@ -130,7 +130,7 @@ function rate_bots_check_botscout($ip) {
     $url = "http://botscout.com/test/?ip=$ip&key=$key";
     $data = drupal_http_request($url, array('timeout' => 2));
     if ($data->code == 200) {
-      if ($data->data{0} == 'Y') {
+      if ($data->data[0] == 'Y') {
         return TRUE;
       }
     }
@@ -158,14 +158,14 @@ function rate_bots_delete_votes() {
         ->execute();
       votingapi_recalculate_results($vote->entity_type, $vote->entity_id, TRUE);
     }
-    
+
     $queue->deleteItem($item);
-    
+
     if (count($votes) == $limit) {
       // There may be more votes from this IP which needs to be deleted.
       $queue->createItem($ip);
     }
-    
+
     $limit -= count($votes) + 1;
     if ($limit <= 0) {
       break;
