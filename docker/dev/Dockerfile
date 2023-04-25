@@ -1,4 +1,4 @@
-FROM drupal:7.91
+FROM drupal:7.97
 
 # Install Composer
 RUN curl -sS https://getcomposer.org/installer | php && \
